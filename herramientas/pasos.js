@@ -221,9 +221,12 @@ const Pasos = (() => {
     document.querySelectorAll("[data-modo]").forEach(bt => bt.addEventListener("click", () => elegir(bt.dataset.modo)));
     document.getElementById("entrada").addEventListener("submit", ev => { ev.preventDefault(); enunciado = ""; construir(); });
     document.querySelectorAll(".entrada input, .entrada select").forEach(i => i.addEventListener("change", () => { enunciado = ""; construir(); }));
-    // Modo inicial desde el ancla (barras.html#queda) o el primero.
-    const ancla = typeof location !== "undefined" ? location.hash.slice(1) : "";
-    elegir(ancla in modos ? ancla : inicial);
+    // Modo inicial desde el ancla (barras.html#queda) o el primero. El ancla
+    // puede llevar también los datos y el enunciado (barras.html#cantidad?a=3&b=7&total=350&texto=…):
+    // así abre la web del alumnado el ejercicio que se está resolviendo.
+    const [ancla, consulta] = (typeof location !== "undefined" ? location.hash.slice(1) : "").split("?");
+    const datos = consulta && ancla in modos ? Object.fromEntries(new URLSearchParams(consulta)) : null;
+    elegir(ancla in modos ? ancla : inicial, datos);
     return elegir;
   }
 

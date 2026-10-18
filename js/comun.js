@@ -120,6 +120,12 @@ const NUM = (id, clase = "") => `<input class="casilla num ${clase}" id="f-${id}
 const SELECT = (id, opciones) => `<select class="casilla" id="f-${id}"><option value="">Elige…</option>${opciones.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>`;
 const pot = (b, e) => `${b}<sup>${e}</sup>`;
 // Nota de simplificación de una respuesta en forma de fracción ya comprobada como correcta.
+// Texto plano de un trozo de HTML de los ejercicios (fracciones como a/b), para
+// pasarlo en la dirección a las herramientas paso a paso.
+function textoPlano(html) {
+  return html.replace(/<span class="f"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, "$1/$2")
+    .replace(/<sup>([^<]*)<\/sup>/g, "^$1").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
 function notaSimplificar(n, d) { const g = mcd(n, d); return g > 1 ? `Está bien. Simplificada: ${F(n, d)} = ${qF(Q(n, d))}.` : ""; }
 
 // Recta doble: porcentajes arriba y cantidades abajo. Marca 0, la referencia

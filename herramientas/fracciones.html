@@ -377,6 +377,10 @@ document.addEventListener("keydown", ev => {
   if (ev.key === "ArrowLeft") { ev.preventDefault(); ir(paso - 1); }
 });
 
+// Datos desde el ancla (fracciones.html#a=1&b=2&op=-&c=1&d=3): la web del
+// alumnado abre así el ejercicio que se está resolviendo.
+for (const [k, v] of new URLSearchParams(location.hash.slice(1)))
+  if (["a", "b", "c", "d", "op"].includes(k)) document.getElementById(k).value = v;
 construir();
 </script>
 </body>

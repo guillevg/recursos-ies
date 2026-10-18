@@ -99,8 +99,16 @@ function actividad(c, t, def, claveAct) {
     });
     $("#b-pista").addEventListener("click", () => {
       if ($("#pista")) return;
+      // Con ej.pasos, la herramienta se abre con este mismo ejercicio (datos y enunciado en el ancla).
       const [nombre, pagina] = A.herramienta;
-      $("#salida").insertAdjacentHTML("afterbegin", `<div class="pista" id="pista"><p>${A.pista}</p><p><a href="herramientas/${pagina}" target="_blank" rel="noopener">Verlo paso a paso: ${nombre}</a></p></div>`);
+      let href = `herramientas/${pagina}`, texto = `Verlo paso a paso: ${nombre}`;
+      if (ej.pasos) {
+        const [pag, modo, datos] = ej.pasos, q = new URLSearchParams(Object.entries(datos).map(([x, y]) => [x, String(y)]));
+        if (modo) q.set("texto", textoPlano(ej.html));
+        href = `herramientas/${pag}#${modo ? modo + "?" : ""}${q}`;
+        texto = "Ver este ejercicio paso a paso";
+      }
+      $("#salida").insertAdjacentHTML("afterbegin", `<div class="pista" id="pista"><p>${A.pista}</p><p><a href="${href}" target="_blank" rel="noopener">${texto}</a></p></div>`);
     });
     $("#b-otro").addEventListener("click", () => { if (!resuelto) progreso.set(k, 0); ej = A.nuevo(variante); pintar(); });
     entradas()[0].focus({ preventScroll: true });

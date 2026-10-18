@@ -1,7 +1,8 @@
 // Actividades de repaso de la SA1 de 2º ESO (Números para entender el mundo).
 // Las letras de los bloques son las de la PD (los títulos llegan en datos.js). Cada actividad: titulo, sub, herramienta [nombre, página de
 // herramientas/], pista, [variantes, dibujoOculto] y nuevo(variante) → un
-// ejercicio { html, trabajo | campos, [dibujo(resuelto)], _ok, comprobar(valores),
+// ejercicio { html, trabajo | campos, [dibujo(resuelto)], [pasos: [página, modo, datos]
+// para abrir la herramienta con este mismo ejercicio], _ok, comprobar(valores),
 // operaciones | solucion }. Números al azar; nunca los de las pruebas escritas.
 "use strict";
 
@@ -49,6 +50,7 @@ Repaso.tema("2eso", "SA1", {
             return s;
           },
           trabajo: lineaSuma(a, b, c, d, op),
+          pasos: ["fracciones.html", null, { a, b, op, c, d }],
           _ok: { n1: String(A), d1: String(m), n2: String(B), d2: String(m), nr: String(R), dr: String(m) },
           comprobar: v => revisarSuma(v, e),
           operaciones: `
@@ -100,6 +102,7 @@ Repaso.tema("2eso", "SA1", {
         }[tipo];
         return {
           html: ctx.t(f, miles(X)),
+          pasos: tipo === "total" ? ["barras.html", "parte", { a: n, b: d, conocida: "resto", valor: X }] : ["barras.html", "cantidad", { a: n, b: d, total: X }],
           dibujo: r => cantidadSVG({ d, n, ...llaves(r), u: r ? u : null }) + `<div class="leyenda"><span><i style="background:var(--azul)"></i>${ctx.pint} (${f})</span><span><i style="background:var(--celda)"></i>el resto (${F(k, d)})</span></div>`,
           campos: [{ id: "u", etiqueta: `Un trozo (${F(1, d)})` }, { id: "r", etiqueta: `Respuesta (${U})` }],
           _ok: { u: String(u), r: String(pregunta) },
@@ -177,6 +180,7 @@ Repaso.tema("2eso", "SA1", {
         const r = Math.round(p * N * 100) / 10000;
         return {
           html: `Calcula de cabeza: <span class="dato">${fmt(p)} %</span> de <span class="dato">${miles(N)}</span>`,
+          pasos: ["porcentajes.html", "de", { p, total: N }],
           dibujo: res => rectaDobleSVG({ p, N, r, incognita: "r", resuelto: res }),
           campos: [{ id: "r", etiqueta: "Resultado" }],
           _ok: { r: fmt(r) },
@@ -210,6 +214,7 @@ Repaso.tema("2eso", "SA1", {
         const pc = elegir(validos), P = pc * T / 100, g = mcd(P, T);
         return {
           html: ctx.t(P, T),
+          pasos: ["porcentajes.html", "que", { parte: P, total: T }],
           dibujo: res => rectaDobleSVG({ p: pc, N: T, r: P, incognita: "p", resuelto: res }),
           campos: [{ id: "pc", etiqueta: "Porcentaje (%)" }],
           _ok: { pc: String(pc) },
@@ -252,6 +257,7 @@ Repaso.tema("2eso", "SA1", {
         }
         return {
           html: `Calcula respetando la jerarquía de las operaciones:<span class="expr">${expr}</span>`,
+          pasos: ["jerarquia.html", "resolver", { expresion: expr.replace(/−/g, "-") }],
           campos: [{ id: "r", etiqueta: "Resultado" }],
           _ok: { r: String(R) },
           comprobar(v) {
@@ -313,6 +319,7 @@ Repaso.tema("2eso", "SA1", {
           const x = fracAzar(5), y = fracAzar(5), R = qMul(x, y), pn = x.n * y.n, pd = x.d * y.d;
           return {
             html: `Multiplica. En el dibujo, lo naranja es ${qF(y)} de los ${qF(x)} azules.`,
+            pasos: ["producto.html", "deUna", { a: y.n, b: y.d, c: x.n, d: x.d }],
             dibujo: res => `<div class="rects uno"><figure>${rectSVG({ cols: x.d, filas: y.d, clase: (j, i) => j < x.n ? (i < y.n ? "c-naranja" : "c-azul") : "", cortes: res ? "vh" : "vH" })}<figcaption>${res ? F(pn, pd) : `${qF(y)} de ${qF(x)}`}</figcaption></figure></div>`,
             trabajo: `<div class="linea-op">${qF(x)}<span class="op">·</span>${qF(y)}<span class="op">=</span>${FIN("rn", "rd")}</div>`,
             _ok: { rn: String(pn), rd: String(pd) },
@@ -331,6 +338,7 @@ Repaso.tema("2eso", "SA1", {
           const R = qDiv(x, y), pn = x.n * y.d, pd = x.d * y.n;
           return {
             html: "Divide multiplicando por la inversa.",
+            pasos: ["producto.html", "caben", { a: x.n, b: x.d, c: y.n, d: y.d }],
             trabajo: `<div class="linea-op">${qF(x)}<span class="op">:</span>${qF(y)}<span class="op">=</span>${qF(x)}<span class="op">·</span>${FIN("in", "id")}<span class="op">=</span>${FIN("rn", "rd")}</div>`,
             _ok: { in: String(y.d), id: String(y.n), rn: String(pn), rd: String(pd) },
             comprobar(v) {
@@ -354,6 +362,7 @@ Repaso.tema("2eso", "SA1", {
         ]);
         return {
           html: ctx.t,
+          pasos: ["producto.html", "caben", { a: N, b: 1, c: a, d: b }],
           dibujoOculto: true,
           dibujo: () => vasosSVG({ N, b, a, unidad: ctx.u }) + `<div class="leyenda"><span>Cada ${ctx.ud}, en ${b} trozos de ${F(1, b)}. Cada color es ${a === 1 ? "un trozo" : `un grupo de ${a} trozos`}: ${ctx.uno === "trozo" ? "un trozo de cable" : `un${ctx.uno === "vaso" ? "" : "a"} ${ctx.uno}`}.</span></div>`,
           campos: [{ id: "r", etiqueta: `Respuesta (${ctx.que})` }],
@@ -395,6 +404,7 @@ Repaso.tema("2eso", "SA1", {
         } while (R.n <= 0 || R.d > 60 || R.n > 120 || (LR.n === R.n && LR.d === R.d));
         return {
           html: "Calcula respetando la jerarquía de las operaciones.",
+          pasos: ["jerarquia.html", "resolver", { expresion: textoPlano(expr).replace(/−/g, "-") }],
           trabajo: `<div class="linea-op">${expr}<span class="op">=</span>${FIN("rn", "rd")}</div><p class="nota-linea">Si sale un número entero, escribe 1 abajo.</p>`,
           _ok: { rn: String(R.n), rd: String(R.d) },
           comprobar(v) {
@@ -530,6 +540,7 @@ Repaso.tema("2eso", "SA1", {
           : ["metros (el tamaño de una célula)", "gramos", "segundos", "metros (el grosor de un hilo)"]);
         return {
           html: `Escribe en notación científica: <span class="dato">${escrito}</span> ${que}.`,
+          pasos: ["notacion.html", "aCientifica", { numero: escrito.replace(/[\s\u202f]/g, "") }],
           campos: [{ id: "m", etiqueta: "Número", potencia: "e" }],
           _ok: { m: fmt(mant), e: String(e) },
           comprobar(v) {
