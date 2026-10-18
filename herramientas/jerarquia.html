@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jerarquía de las operaciones</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=atkinson-hyperlegible-next:400,700&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .entrada input[type="text"] { width: min(32rem, 100%); font-size: 1.2rem; }
+  .lineas { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.5rem 0; }
+  .linea { font-size: 1.6rem; display: flex; align-items: center; gap: 0.25em; flex-wrap: wrap; justify-content: center; }
+  .linea .igual { color: var(--suave); margin-right: 0.3em; }
+  .marcada { background: color-mix(in srgb, var(--naranja) 55%, transparent); border-radius: 6px; padding: 0 0.15em; }
+  .resultado { font-weight: 700; color: var(--acento); }
+  .linea.final { font-size: 1.9rem; }
+  body.proyectando .linea { font-size: 2.4rem; }
+  body.proyectando .linea.final { font-size: 2.8rem; }
+  @media (max-width: 640px) { .linea { font-size: 1.15rem; } .linea.final { font-size: 1.35rem; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Jerarquía de las operaciones</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <label for="ex">Expresión:</label>
+  <input id="ex" type="text" spellcheck="false" aria-describedby="como">
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda" id="como">Escribe · o * para multiplicar, : para dividir, 3/4 para una fracción, 2,5 para un decimal y (−3) para un número negativo. También con las flechas ← → del teclado.</p>
+
+<script src="pasos.js"></script>
+<script src="jerarquia.js"></script>
+<script>
+"use strict";
+const { frac } = Pasos;
+const val = q => Jerarquia.comoDecimal(q) ?? Jerarquia.escribirQ(q);
+// Número escrito: fracción apilada si es una fracción.
+function numero(txt) {
+  const m = txt.match(/^(−?)(\d+)\/(\d+)$/);
+  return m ? `${m[1]}${frac(m[2], m[3])}` : txt;
+}
+// Expresión en HTML, con la operación de `camino` resaltada.
+function html(n, camino) {
+  const marcar = (s, aqui) => aqui ? `<span class="marcada">${s}</span>` : s;
+  const rec = (m, ruta) => {
+    const aqui = camino && ruta.length === camino.length && ruta.every((k, i) => k === camino[i]);
+    if (m.tipo === "num") return numero(m.txt);
+    if (m.tipo === "par") { const [a, c] = { "[": "[]", "{": "{}" }[m.forma] ?? "()"; return marcar(`${a}${rec(m.dentro, [...ruta, "dentro"])}${c}`, aqui); }
+    return marcar(`${rec(m.izq, [...ruta, "izq"])} ${m.op} ${rec(m.der, [...ruta, "der"])}`, aqui);
+  };
+  return rec(n, []);
+}
+const POR_QUE = {
+  parentesis: "Primero, lo que está <b>entre paréntesis</b>.",
+  prioridad: "Las <b>multiplicaciones y divisiones</b> van antes que las sumas y restas.",
+  izquierda: "Entre operaciones del mismo nivel, <b>de izquierda a derecha</b>.",
+  unica: "Es la única operación que queda.",
+};
+const NOMBRE = { "+": "suma", "−": "resta", "·": "multiplicación", ":": "división" };
+
+function dibujar(r) {
+  const { arbol, pasos, resultado, alReves } = r;
+  const escena = document.getElementById("escena");
+  escena.className = "escena";
+  const lineas = pasos.map((p, k) => `<div class="linea ver${k}">${k ? '<span class="igual">=</span>' : ""}${html(p.arbol, p.camino)}</div>`);
+  lineas.push(`<div class="linea final ver${pasos.length}"><span class="igual">=</span><span class="resultado">${numero(Jerarquia.escribirQ(resultado))}</span></div>`);
+  escena.innerHTML = `<div class="lineas">${lineas.join("")}</div>`;
+  const par = s => s.startsWith("−") ? `(${numero(s)})` : numero(s);
+  const textos = pasos.map(p => [`La ${NOMBRE[p.op]}`, `<p>${POR_QUE[p.porque]}</p><p>${numero(p.ta)} ${p.op} ${par(p.tb)} = <b>${numero(p.tr)}</b></p>`]);
+  const distinto = alReves && (alReves.n !== resultado.n || alReves.d !== resultado.d);
+  // Con fracciones, el resultado «al revés» también se escribe como fracción.
+  const conFracciones = JSON.stringify(arbol, (k, v) => typeof v === "bigint" ? String(v) : v).includes('"fraccion":true');
+  const escr = q => conFracciones && q.d !== 1n ? Jerarquia.escribirQ(q) : val(q);
+  const dec = Jerarquia.comoDecimal(resultado);
+  textos.push(["Resultado", `<p>El resultado es <b>${numero(Jerarquia.escribirQ(resultado))}</b>${dec && resultado.d !== 1n ? ` = ${dec}` : ""}.</p>
+    ${distinto ? `<p>Si se operara de izquierda a derecha, sin respetar la jerarquía, saldría ${numero(escr(alReves))}: <b>otro número</b>. El orden de las operaciones cambia el resultado.</p>` : pasos.length > 1 ? "<p>Aquí, operar de izquierda a derecha daría lo mismo, pero no siempre es así.</p>" : ""}`]);
+  if (!pasos.length) textos[0][0] = "Ya es un número";
+  return textos;
+}
+
+const elegirModo = Pasos.montar({
+  resolver: { campos: { expresion: "ex" }, calcular: Jerarquia.calcular.resolver, dibujar,
+              ejemplos: Jerarquia.EJEMPLOS.resolver, azar: () => Jerarquia.azar() },
+}, "resolver");
+</script>
+</body>
+</html>

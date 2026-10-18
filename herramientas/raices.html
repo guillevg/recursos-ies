@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raíces cuadradas con cuadrados</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=atkinson-hyperlegible-next:400,700&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .cuadro-n { fill: var(--azul); stroke: var(--tinta); stroke-width: 2; }
+  .cuadro-area { fill: var(--naranja); fill-opacity: 0.55; stroke: var(--tinta); stroke-width: 2.5; }
+  .cuadro-sig { fill: none; stroke: var(--tinta); stroke-width: 2; stroke-dasharray: 7 5; }
+  .etq { font-size: 17px; fill: var(--tinta); }
+  .etq.medio { text-anchor: middle; }
+  .etq.fuerte { font-weight: 700; }
+  .tabla { font-size: 17px; fill: var(--tinta); font-variant-numeric: tabular-nums; }
+  .tabla.si { fill: var(--acento); font-weight: 700; }
+  .tabla.no { fill: var(--rojo); }
+  .eje { stroke: var(--tinta); stroke-width: 2; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Raíces cuadradas con cuadrados</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <label for="ar">Área del cuadrado:</label>
+  <input id="ar" type="number" min="0.01" max="10000" step="any">
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. El área puede tener hasta dos decimales.</p>
+
+<script src="pasos.js"></script>
+<script src="raices.js"></script>
+<script>
+"use strict";
+const { svg, num, texto } = Pasos;
+const raiz = x => `√${num(x)}`;
+
+function dibujar(r) {
+  const { area, n, exacta, a, decimas, exactaDecimas, raiz: valor, redondeo, cercaDe } = r;
+  const g = Pasos.lienzo(340);
+  const max = n + 1, L = 260, X = 90, Y = 300, s = v => v / max * L;
+  const lado = Math.sqrt(area);
+  // Cuadrado de encima, el del área y el de debajo, con la esquina común abajo a la izquierda.
+  if (!exacta) svg("rect", { x: X, y: Y - s(n + 1), width: s(n + 1), height: s(n + 1), class: "cuadro-sig ver2" }, g);
+  svg("rect", { x: X, y: Y - s(lado), width: s(lado), height: s(lado), class: "cuadro-area" }, g);
+  if (n > 0 && !exacta) svg("rect", { x: X, y: Y - s(n), width: s(n), height: s(n), class: "cuadro-n ver1" }, g);
+  // El área, en el centro hasta que aparece el cuadrado azul; después, arriba.
+  texto(g, { x: X + s(lado) / 2, y: Y - s(lado) / 2 + 6, t: `${num(area)}`, clase: `etq medio fuerte ${exacta ? "" : "hasta1"}` });
+  if (!exacta) texto(g, { x: 470, y: 30, t: `En naranja, el cuadrado de área ${num(area)}`, clase: "etq ver1", ancla: "start" });
+  if (n > 0 && !exacta) texto(g, { x: X + s(n) / 2, y: Y - s(n) + 22, t: `${n}² = ${n * n}`, clase: "etq medio ver1" });
+  if (!exacta) texto(g, { x: X + s(n + 1) - 6, y: Y - s(n + 1) - 8, t: `${n + 1}² = ${(n + 1) ** 2}`, clase: "etq ver2", ancla: "end" });
+  // Lado: marcas en la base.
+  svg("line", { x1: X, y1: Y + 14, x2: X + s(n + 1), y2: Y + 14, class: "eje ver3" }, g);
+  // Si n y n + 1 quedan muy juntos, sus números se separan hacia fuera.
+  const juntos = s(n + 1) - s(n) < 34;
+  for (const [v, t, ancla] of exacta ? [[0, "0", "middle"], [n, String(n), "middle"]] : [[0, "0", "middle"], [n, String(n), juntos ? "end" : "middle"], [n + 1, String(n + 1), juntos ? "start" : "middle"]].filter(([v], i) => i === 0 || v > 0)) {
+    svg("line", { x1: X + s(v), y1: Y + 8, x2: X + s(v), y2: Y + 20, class: "eje ver3" }, g);
+    texto(g, { x: X + s(v) + (ancla === "end" ? -3 : ancla === "start" ? 3 : 0), y: Y + 38, t, clase: `etq ver3 ${ancla === "middle" ? "medio" : ""}`, ancla });
+  }
+  // Tabla de las décimas.
+  const filas = exacta ? [] : decimas.slice(Math.max(0, decimas.length - 6));
+  filas.forEach((d, i) => {
+    const cabe = d.cuadrado <= area + 1e-9;
+    texto(g, { x: 470, y: 70 + i * 34, t: `${num(d.lado)}² = ${num(d.cuadrado)}  ${cabe ? (Math.abs(d.cuadrado - area) < 1e-9 ? "=" : "<") : ">"} ${num(area)}`, clase: `tabla ${cabe ? "si" : "no"} ver4`, ancla: "start" });
+  });
+  if (exacta) return [
+    ["El cuadrado", `<p>Un cuadrado tiene ${num(area)} de área. Su lado es el número que, multiplicado por sí mismo, da ${num(area)}: ${raiz(area)}.</p>`],
+    ["Un cuadrado perfecto", `<p>${n} · ${n} = ${n * n}: el lado mide exactamente <b>${n}</b>. ${raiz(area)} = ${n}.</p>`],
+    ["Comprobación", `<p>${n}² = ${n * n} ✓. Elevar al cuadrado y sacar la raíz cuadrada son operaciones inversas.</p>`],
+  ];
+  const decAbajo = num(a / 10), decArriba = num((a + 1) / 10);
+  return [
+    ["El cuadrado", `<p>Un cuadrado tiene ${num(area)} de área. ¿Cuánto mide su lado, ${raiz(area)}?</p>`],
+    ["El cuadrado perfecto de debajo", n > 0 ? `<p>El mayor cuadrado perfecto que no pasa de ${num(area)} es ${n}² = ${n * n} (en azul).</p>` : `<p>El área es menor que 1: el lado es menor que 1 (1² = 1).</p>`],
+    ["El de encima", `<p>El siguiente, ${n + 1}² = ${(n + 1) ** 2}, ya se pasa (con borde discontinuo).</p>`],
+    ["Entre dos enteros", `<p>${n * n} < ${num(area)} < ${(n + 1) ** 2}, así que <b>${n} < ${raiz(area)} < ${n + 1}</b>. Está más cerca de ${cercaDe}.</p>`],
+    ["Afinamos: las décimas", exactaDecimas ? `<p>Probando con décimas: ${decAbajo}² = ${num(area)} exactamente. ${raiz(area)} = <b>${decAbajo}</b>.</p>` : `<p>Probamos con décimas: ${decAbajo}² no llega a ${num(area)} y ${decArriba}² se pasa. Así que <b>${decAbajo} < ${raiz(area)} < ${decArriba}</b>.</p>`],
+    ["Resultado", exactaDecimas ? `<p>${raiz(area)} = <b>${decAbajo}</b>, porque ${decAbajo}² = ${num(area)}.</p>` : `<p>Redondeado a las décimas, ${raiz(area)} ≈ <b>${num(redondeo)}</b>. Con la calculadora: ${num(valor)}…</p>
+      <p>No es una raíz exacta: sus cifras decimales no se acaban nunca, por eso se da con la precisión que pida el problema.</p>`],
+  ];
+}
+
+const elegirModo = Pasos.montar({
+  lado: { campos: { area: "ar" }, calcular: Raices.calcular.lado, dibujar, ejemplos: Raices.EJEMPLOS.lado, azar: () => Raices.azar() },
+}, "lado");
+</script>
+</body>
+</html>

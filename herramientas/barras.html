@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fracciones con el modelo de barras</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=atkinson-hyperlegible-next:400,700&display=swap">
+<link rel="stylesheet" href="pasos.css">
+</head>
+<body>
+<header>
+  <h1>Fracciones con el modelo de barras</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Tipo de problema">
+  <button type="button" role="tab" data-modo="cantidad">La fracción de una cantidad</button>
+  <button type="button" role="tab" data-modo="parte">Conozco una parte: ¿cuál es el total?</button>
+  <button type="button" role="tab" data-modo="queda">«De lo que queda»</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="cantidad">
+    <span class="frac-input"><input id="ca" class="corto" type="number" min="0" max="12" aria-label="Numerador"><hr><input id="cb" class="corto" type="number" min="1" max="12" aria-label="Denominador"></span>
+    de <input id="ct" type="number" min="1" max="99999" aria-label="Total">
+  </span>
+  <span data-para="parte">
+    los <span class="frac-input"><input id="pa" class="corto" type="number" min="1" max="11" aria-label="Numerador"><hr><input id="pb" class="corto" type="number" min="2" max="12" aria-label="Denominador"></span>
+    se van;
+    <select id="pc" aria-label="Qué parte conozco"><option value="resto">lo que queda</option><option value="pintada">lo que se va</option></select>
+    son <input id="pv" type="number" min="1" max="99999" aria-label="Cantidad conocida">
+  </span>
+  <span data-para="queda">
+    primero <span class="frac-input"><input id="qa" class="corto" type="number" min="1" max="11" aria-label="Numerador de la primera fracción"><hr><input id="qb" class="corto" type="number" min="2" max="12" aria-label="Denominador de la primera fracción"></span>,
+    después <span class="frac-input"><input id="qc" class="corto" type="number" min="1" max="11" aria-label="Numerador de la segunda fracción"><hr><input id="qd" class="corto" type="number" min="2" max="12" aria-label="Denominador de la segunda fracción"></span>
+    de lo que queda; al final quedan <input id="qf" type="number" min="1" max="99999" aria-label="Lo que queda al final">
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Denominadores del 2 al 12.</p>
+
+<script src="pasos.js"></script>
+<script src="barras.js"></script>
+<script>
+"use strict";
+const { svg, frac, num } = Pasos;
+const { X0, ANCHO, ALTO, barra, valores, llave } = Pasos;
+const nuevaEscena = Pasos.lienzo;
+
+// ------------------------------------------------------------------ modos
+function dibujarCantidad(r) {
+  const { a, b, total, u, parte, resto } = r;
+  const g = nuevaEscena(210), y = 70;
+  const p = barra(g, { y, partes: b, cortes: "ver1", color: k => k < a ? "azul desde3" : "blanco" });
+  llave(g, { x1: X0, x2: X0 + ANCHO, y, arriba: true, texto: `Total: ${num(total)}` });
+  valores(g, { y, p, desde: 0, hasta: b, texto: num(u), clase: "ver2" });
+  if (a > 0) llave(g, { x1: X0, x2: X0 + a * p, y, arriba: false, texto: `${a} · ${num(u)} = ${num(parte)}`, clase: "ver4" });
+  if (a < b) llave(g, { x1: X0 + a * p, x2: X0 + ANCHO, y, arriba: false, texto: `${b - a} · ${num(u)} = ${num(resto)}`, clase: "ver4", suave: true });
+  return [
+    ["El total", `<p>La barra entera es el total: <b>${num(total)}</b>.</p><p>Queremos calcular ${frac(a, b)} de ${num(total)}.</p>`],
+    ["Cortamos en " + b, `<p>El denominador, <b>${b}</b>, dice en cuántos trozos <b>iguales</b> cortamos la barra.</p>`],
+    ["Lo que vale un trozo", `<p>Si ${num(total)} se reparte en ${b} trozos iguales, cada trozo vale ${num(total)} : ${b} = <b>${num(u)}</b>.</p>`],
+    ["Cogemos " + a, `<p>El numerador, <b>${a}</b>, dice cuántos trozos cogemos.</p>`],
+    ["Resultado", `<p>${frac(a, b)} de ${num(total)} = ${a} · ${num(u)} = <b>${num(parte)}</b>.</p>
+      <p>Y lo que queda: ${b - a} ${b - a === 1 ? "trozo" : "trozos"} · ${num(u)} = <b>${num(resto)}</b> (o ${num(total)} − ${num(parte)}).</p>`],
+  ];
+}
+
+function dibujarParte(r) {
+  const { a, b, conocida, valor, k, u, total, pintada, resto } = r;
+  const g = nuevaEscena(210), y = 70;
+  const p = barra(g, { y, partes: b, color: j => j < a ? "azul" : "blanco" });
+  const [i0, i1] = conocida === "resto" ? [a, b] : [0, a];   // trozos conocidos
+  llave(g, { x1: X0 + i0 * p, x2: X0 + i1 * p, y, arriba: false, texto: `${num(valor)}` });
+  llave(g, { x1: X0, x2: X0 + ANCHO, y, arriba: true, texto: "Total: ?", clase: "hasta3", suave: true });
+  llave(g, { x1: X0, x2: X0 + ANCHO, y, arriba: true, texto: `Total: ${b} · ${num(u)} = ${num(total)}`, clase: "ver3" });
+  valores(g, { y, p, desde: i0, hasta: i1, texto: num(u), clase: "ver1" });
+  valores(g, { y, p, desde: i0 === 0 ? a : 0, hasta: i0 === 0 ? b : a, texto: num(u), clase: "ver2" });
+  const otra = conocida === "resto" ? ["lo que se va", pintada, 0, a] : ["lo que queda", resto, a, b];
+  const se = conocida === "resto" ? `lo que queda, ${frac(b - a, b)}` : `${frac(a, b)}`;
+  return [
+    ["Lo que sabemos", `<p>Se van ${frac(a, b)} (en azul). Sabemos que ${se} del total ${k === 1 ? "es" : "son"} <b>${num(valor)}</b>. ¿Cuál es el total?</p>
+      ${conocida === "resto" ? `<p>Si se van ${a} de cada ${b} trozos, quedan ${b} − ${a} = ${b - a}.</p>` : ""}`],
+    ["Un trozo", `<p>${num(valor)} ${k === 1 ? "es" : "son"} ${k} ${k === 1 ? "trozo" : "trozos iguales"}: cada trozo vale ${num(valor)} : ${k} = <b>${num(u)}</b>.</p>`],
+    ["Todos los trozos valen lo mismo", `<p>Los ${b} trozos son iguales: todos valen ${num(u)}.</p>`],
+    ["El total", `<p>Total = ${b} · ${num(u)} = <b>${num(total)}</b>.</p>
+      <p>Y ${otra[0]}: ${otra[3] - otra[2]} · ${num(u)} = <b>${num(otra[1])}</b>. Comprobación: ${num(pintada)} + ${num(resto)} = ${num(total)}.</p>`],
+  ];
+}
+
+function dibujarQueda(r) {
+  const { a, b, c, d, final, u2, resto, u1, total, primero, segundo } = r;
+  const g = nuevaEscena(380), y1 = 70, y2 = 240;
+  const p1 = barra(g, { y: y1, partes: b, color: k => k < a ? "azul" : "blanco" });
+  const xr = X0 + a * p1;   // donde empieza lo que queda tras el primero
+  const t = svg("text", { x: X0, y: y1 - 44, class: "rotulo-barra" }, g); t.textContent = "El total";
+  llave(g, { x1: X0, x2: X0 + ANCHO, y: y1, arriba: true, texto: "?", clase: "hasta5", suave: true });
+  llave(g, { x1: X0, x2: X0 + ANCHO, y: y1, arriba: true, texto: `Total: ${b} · ${num(u1)} = ${num(total)}`, clase: "ver5" });
+  llave(g, { x1: X0, x2: xr, y: y1, arriba: false, texto: `${frac_txt(a, b)}`, suave: true });
+  // Lo que queda tras el primero, ampliado en una segunda barra.
+  const zoom = svg("g", { class: "ver1" }, g);
+  // La unión baja primero en vertical, para no cruzar los rótulos de debajo de la barra.
+  const yb = y1 + ALTO + 52;
+  svg("path", { d: `M ${xr} ${y1 + ALTO} V ${yb} L ${X0} ${y2} M ${X0 + ANCHO} ${y1 + ALTO} V ${y2}`, class: "union" }, zoom);
+  const t2 = svg("text", { x: (X0 + ANCHO) / 2, y: y2 - 12, class: "rotulo-barra", "text-anchor": "middle" }, zoom); t2.textContent = "Lo que quedaba (ampliado)";
+  const p2 = barra(zoom, { y: y2, partes: d, color: k => k < c ? "naranja" : "blanco" });
+  llave(zoom, { x1: X0, x2: X0 + c * p2, y: y2, arriba: false, texto: `${frac_txt(c, d)} de lo que quedaba`, suave: true });
+  llave(zoom, { x1: X0 + c * p2, x2: X0 + ANCHO, y: y2, arriba: false, texto: `${num(final)}` });
+  valores(g, { y: y2, p: p2, desde: c, hasta: d, texto: num(u2), clase: "ver2" });
+  valores(g, { y: y2, p: p2, desde: 0, hasta: c, texto: num(u2), clase: "ver3" });
+  llave(g, { x1: xr, x2: X0 + ANCHO, y: y1, arriba: false, texto: `quedaba ${num(resto)}`, clase: "ver3" });
+  valores(g, { y: y1, p: p1, desde: a, hasta: b, texto: num(u1), clase: "ver4" });
+  valores(g, { y: y1, p: p1, desde: 0, hasta: a, texto: num(u1), clase: "ver5" });
+  const exacto = Pasos.esEntero(u2) && Pasos.esEntero(u1);
+  return [
+    ["El problema", `<p>Primero se va ${frac(a, b)} del total (en azul). Después, ${frac(c, d)} de <b>lo que quedaba</b>, no del total. Al final quedan <b>${num(final)}</b>. ¿Cuál era el total?</p>
+      <p>Trabajamos <b>hacia atrás</b>: de lo último que sabemos hacia el principio.</p>`],
+    ["Lo que quedaba, en grande", `<p>Lo que quedaba tras el primero (${frac(b - a, b)} del total) lo dibujamos en otra barra y la cortamos en ${d}: se van ${c} (en naranja) y quedan ${d - c}, que son los ${num(final)} del final.</p>`],
+    ["Un trozo de lo que quedaba", `<p>${num(final)} ${d - c === 1 ? "es 1 trozo" : `son ${d - c} trozos`}: cada uno vale ${num(final)} : ${d - c} = <b>${num(u2)}</b>.</p>`],
+    ["Lo que quedaba", `<p>La segunda barra tiene ${d} trozos de ${num(u2)}: lo que quedaba era ${d} · ${num(u2)} = <b>${num(resto)}</b>.</p>`],
+    ["Un trozo del total", `<p>Esos ${num(resto)} son los ${b - a} trozos blancos de la barra de arriba: cada uno vale ${num(resto)} : ${b - a} = <b>${num(u1)}</b>.</p>`],
+    ["El total", `<p>Total = ${b} · ${num(u1)} = <b>${num(total)}</b>.</p>
+      <p>Primero se va ${a} · ${num(u1)} = ${num(primero)}; después, ${c} · ${num(u2)} = ${num(segundo)}; y quedan ${num(final)}. Comprobación: ${num(primero)} + ${num(segundo)} + ${num(final)} = ${num(total)}.</p>
+      <p>Error típico: sumar ${frac(a, b)} y ${frac(c, d)} como si las dos fueran del total.</p>
+      ${exacto ? "" : `<p class="aviso">Con estos datos los trozos no salen exactos: revisa los números del problema.</p>`}`],
+  ];
+}
+const frac_txt = (n, d) => `${n}/${d}`;
+
+// ------------------------------------------------------------- datos y UI
+const MODOS = {
+  cantidad: { campos: { a: "ca", b: "cb", total: "ct" }, dibujar: dibujarCantidad },
+  parte: { campos: { a: "pa", b: "pb", conocida: "pc", valor: "pv" }, dibujar: dibujarParte },
+  queda: { campos: { a: "qa", b: "qb", c: "qc", d: "qd", final: "qf" }, dibujar: dibujarQueda },
+};
+for (const [m, def] of Object.entries(MODOS))
+  Object.assign(def, { calcular: Barras.calcular[m], ejemplos: Barras.EJEMPLOS[m], azar: () => Barras.azar(m) });
+const elegirModo = Pasos.montar(MODOS, "cantidad");
+</script>
+</body>
+</html>

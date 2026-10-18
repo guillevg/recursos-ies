@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sumar fracciones con rectángulos</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=atkinson-hyperlegible-next:400,700&display=swap">
+<style>
+  :root {
+    --azul: #7fb3d5;
+    --naranja: #f5b041;
+    --tinta: #1f1f1f;
+    --suave: #5b6770;
+    --borde: #d8dee2;
+    --fondo: #ffffff;
+    --fondo-alt: #f4f7f9;
+    --acento: #3B6E8F;
+    --t: 600ms;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; max-width: 1150px; padding: 1.2rem 16px 3rem;
+    font-family: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+    color: var(--tinta); background: var(--fondo); line-height: 1.45;
+  }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  h1 { font-size: 1.5rem; margin: 0; color: var(--acento); }
+  header a { color: var(--acento); font-size: 0.95rem; }
+
+  /* Entrada de las fracciones */
+  .entrada {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 1.2rem;
+    background: var(--fondo-alt); border: 1px solid var(--borde); border-radius: 10px;
+    padding: 0.8rem 1rem; margin: 1rem 0;
+  }
+  .frac-input { display: inline-flex; flex-direction: column; align-items: center; }
+  .frac-input input {
+    width: 3.4rem; font: inherit; font-size: 1.4rem; text-align: center;
+    border: 1px solid var(--borde); border-radius: 6px; padding: 0.1rem;
+  }
+  .frac-input hr { width: 100%; border: 0; border-top: 2px solid var(--tinta); margin: 4px 0; }
+  .entrada select { font: inherit; font-size: 1.4rem; padding: 0.1rem 0.3rem; border-radius: 6px; border: 1px solid var(--borde); }
+  .ejemplos { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-left: auto; align-items: center; }
+  .ejemplos span { color: var(--suave); font-size: 0.9rem; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--borde);
+    background: #fff; padding: 0.35rem 0.7rem;
+  }
+  button:hover:not(:disabled) { border-color: var(--acento); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.principal { background: var(--acento); color: #fff; border-color: var(--acento); font-weight: 700; }
+
+  /* Escena: rectángulo A, signo, rectángulo B, =, resultado */
+  /* Cada elemento (rectángulo o signo) es una columna: arriba una caja con
+     la altura de los rectángulos, donde todo se centra en vertical; abajo el
+     rótulo. Sin `gap` en la escena: el bloque «= resultado» empieza con
+     ancho 0 y no debe descentrar lo demás. */
+  .escena {
+    --ancho: 230px;
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+    padding: 3rem 0 2.5rem;
+  }
+  .panel, .signo { display: flex; flex-direction: column; align-items: center; }
+  .caja { height: calc(var(--ancho) * 164 / 244); display: flex; align-items: center; justify-content: center; gap: 0.6rem; }
+  .panel svg { width: var(--ancho); height: auto; overflow: visible; }
+  .signo { font-size: 2.2rem; padding: 0 1.1rem; }
+  .rotulo { font-size: 1.25rem; min-height: 3.6rem; margin-top: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 0.35rem; white-space: nowrap; }
+  .cola { display: flex; align-items: flex-start; max-width: 0; overflow: hidden; transition: max-width 900ms ease-in-out; }
+  .s4 .cola { max-width: 1000px; }
+
+  /* Fracciones escritas */
+  .f { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.1; margin: 0 0.1em; }
+  .f > span:first-child { border-bottom: 2px solid currentColor; padding: 0 0.15em; }
+
+  /* SVG */
+  .celda { stroke: none; transition: fill var(--t), opacity var(--t); }
+  .blanco { fill: #fff; }
+  .azul { fill: var(--azul); }
+  .naranja { fill: var(--naranja); }
+  .contorno { fill: none; stroke: var(--tinta); stroke-width: 2.5; }
+  .base { stroke: var(--tinta); stroke-width: 1.6; }
+  .extra { stroke: var(--tinta); stroke-width: 1.6; stroke-dashoffset: var(--len); stroke-dasharray: var(--len); transition: stroke-dashoffset 900ms ease-in-out; }
+  .muestra { fill: none; stroke: #c0392b; stroke-width: 4; opacity: 0; transition: opacity 400ms; }
+
+  /* Pasos acumulados: s1 cortes en A, s2 cortes en B, s3 trozos iguales,
+     s4 operación, s5 resultado */
+  .s1 .ext1, .s2 .ext2 { stroke-dashoffset: 0; }
+  .s3:not(.s4) .muestra { opacity: 1; }
+  .ver1, .ver2, .ver3, .ver4, .ver5 { opacity: 0; transition: opacity var(--t); }
+  .s1 .ver1, .s2 .ver2, .s3 .ver3, .s4 .ver4, .s5 .ver5 { opacity: 1; }
+  .panel-res { opacity: 0; visibility: hidden; transition: opacity var(--t), visibility var(--t); }
+  .s4 .panel-res { opacity: 1; visibility: visible; }
+  .res-naranja { fill: #fff; }
+  .s4 .res-naranja { fill: var(--naranja); }
+  .tachon { stroke: #c0392b; stroke-width: 3; opacity: 0; transition: opacity 300ms; }
+  .s4 .tachon { opacity: 1; }
+  .s5 .quitar { fill: #fff; }
+  .s5 .tachon { opacity: 0.25; }
+
+  /* Explicación y controles */
+  .explicacion {
+    max-width: 820px; margin: 1rem auto 0; background: var(--fondo-alt);
+    border-left: 5px solid var(--acento); border-radius: 6px; padding: 0.8rem 1.1rem; font-size: 1.15rem;
+  }
+  .explicacion h2 { font-size: 1.15rem; margin: 0 0 0.3rem; color: var(--acento); }
+  .explicacion p { margin: 0.3rem 0; }
+  .controles { display: flex; justify-content: center; align-items: center; gap: 0.8rem; margin-top: 1rem; }
+  .puntos { display: flex; gap: 6px; }
+  .puntos i { width: 11px; height: 11px; border-radius: 50%; background: var(--borde); display: block; }
+  .puntos i.hecho { background: var(--acento); }
+  .ayuda { text-align: center; color: var(--suave); font-size: 0.85rem; margin-top: 0.5rem; }
+  .aviso { color: #a93226; font-weight: 700; }
+
+  @media (max-width: 640px) {
+    .escena { --ancho: 130px; padding: 2rem 0 1.5rem; }
+    .signo { font-size: 1.6rem; padding: 0 0.5rem; }
+    .rotulo { font-size: 1rem; }
+    .explicacion { font-size: 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { :root { --t: 0ms; } .extra { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sumar y restar fracciones con rectángulos</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <label class="frac-input" title="Primera fracción">
+    <input id="a" type="number" min="0" max="12" value="1" aria-label="Numerador de la primera fracción">
+    <hr>
+    <input id="b" type="number" min="1" max="12" value="2" aria-label="Denominador de la primera fracción">
+  </label>
+  <select id="op" aria-label="Operación"><option value="+">+</option><option value="-">−</option></select>
+  <label class="frac-input" title="Segunda fracción">
+    <input id="c" type="number" min="0" max="12" value="1" aria-label="Numerador de la segunda fracción">
+    <hr>
+    <input id="d" type="number" min="1" max="12" value="3" aria-label="Denominador de la segunda fracción">
+  </label>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos">
+    <span>Ejemplos:</span>
+    <button type="button" data-ej="1,2,+,1,3">½ + ⅓</button>
+    <button type="button" data-ej="3,4,-,2,3">¾ − ⅔</button>
+    <button type="button" data-ej="2,3,+,3,4">⅔ + ¾</button>
+    <button type="button" data-ej="1,4,+,1,6">¼ + ⅙</button>
+    <button type="button" id="azar">Al azar</button>
+  </div>
+</form>
+
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Denominadores del 1 al 12; numeradores entre 0 y el denominador.</p>
+
+<script>
+"use strict";
+const W = 240, H = 160, SVGNS = "http://www.w3.org/2000/svg";
+const PASOS = 6;  // 0: las dos fracciones … 5: resultado
+let e = null, paso = 0;
+
+const mcd = (x, y) => y === 0 ? x : mcd(y, x % y);
+const frac = (n, d, extra = "") => `<span class="f ${extra}"><span>${n}</span><span>${d}</span></span>`;
+const NOMBRES = { 1: "enteros", 2: "medios", 3: "tercios", 4: "cuartos", 5: "quintos", 6: "sextos",
+  7: "séptimos", 8: "octavos", 9: "novenos", 10: "décimos", 11: "onceavos", 12: "doceavos",
+  14: "catorceavos", 15: "quinceavos", 16: "dieciseisavos", 18: "dieciochoavos", 20: "veinteavos",
+  24: "veinticuatroavos", 30: "treintavos" };
+const nombre = n => NOMBRES[n] ? `<b>${NOMBRES[n]}</b>` : `trozos de ${frac(1, n)}`;
+
+function el(tag, attrs = {}, padre = null) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (padre) padre.appendChild(n);
+  return n;
+}
+
+// Rectángulo de `cols` × `filas` celdas. `claseCelda(col, fila)` devuelve la
+// clase de cada celda (o [clase, estilo]); `lineas` = [{dir: "v"|"h", clase}]
+// dibuja los cortes; `muestra` resalta una celda (paso 3).
+function rectangulo({ cols, filas, claseCelda, lineas, muestra = null, extra = null }) {
+  const svg = el("svg", { viewBox: `-2 -2 ${W + 4} ${H + 4}` });
+  const cw = W / cols, ch = H / filas;
+  for (let j = 0; j < cols; j++) for (let i = 0; i < filas; i++) {
+    let c = claseCelda(j, i), estilo = "";
+    if (Array.isArray(c)) [c, estilo] = c;
+    el("rect", { x: j * cw, y: i * ch, width: cw + 0.3, height: ch + 0.3, class: "celda " + c, style: estilo, "data-j": j, "data-i": i }, svg);
+  }
+  for (const { dir, clase } of lineas) {
+    if (dir === "v") for (let j = 1; j < cols; j++)
+      el("line", { x1: j * cw, y1: 0, x2: j * cw, y2: H, class: clase, style: `--len:${H}` }, svg);
+    else for (let i = 1; i < filas; i++)
+      el("line", { x1: 0, y1: i * ch, x2: W, y2: i * ch, class: clase, style: `--len:${W}` }, svg);
+  }
+  if (extra) extra(svg, cw, ch);
+  el("rect", { x: 0, y: 0, width: W, height: H, class: "contorno" }, svg);
+  if (muestra) el("rect", { x: muestra[0] * cw, y: muestra[1] * ch, width: cw, height: ch, class: "muestra" }, svg);
+  return svg;
+}
+
+function leer() {
+  const v = id => parseInt(document.getElementById(id).value, 10);
+  let b = Math.min(12, Math.max(1, v("b") || 1)), d = Math.min(12, Math.max(1, v("d") || 1));
+  let a = Math.min(b, Math.max(0, v("a") || 0)), c = Math.min(d, Math.max(0, v("c") || 0));
+  Object.entries({ a, b, c, d }).forEach(([k, x]) => document.getElementById(k).value = x);
+  return { a, b, c, d, op: document.getElementById("op").value };
+}
+
+function construir() {
+  const { a, b, c, d, op } = leer();
+  const N = b * d, A = a * d, B = c * b, R = op === "+" ? A + B : A - B;
+  e = { a, b, c, d, op, N, A, B, R, negativo: R < 0 };
+  const signo = op === "+" ? "+" : "−";
+  const escena = document.getElementById("escena");
+  escena.innerHTML = "";
+
+  const panel = (svgs, rotulo, clase = "") => {
+    const p = document.createElement("div");
+    p.className = "panel " + clase;
+    const cont = document.createElement("div");
+    cont.className = "caja";
+    svgs.forEach(s => cont.appendChild(s));
+    p.appendChild(cont);
+    const r = document.createElement("div");
+    r.className = "rotulo";
+    r.innerHTML = rotulo;
+    p.appendChild(r);
+    return p;
+  };
+  // Signo: misma estructura que un panel (caja + rótulo vacío), para que
+  // quede centrado respecto a los rectángulos y no al conjunto con el rótulo.
+  const texto = t => {
+    const s = document.createElement("div");
+    s.className = "signo";
+    s.innerHTML = `<div class="caja">${t}</div><div class="rotulo"></div>`;
+    return s;
+  };
+
+  // Primera fracción: cortes verticales; recibe los horizontales en el paso 1.
+  const svgA = rectangulo({ cols: b, filas: d, claseCelda: j => j < a ? "azul" : "blanco",
+    lineas: [{ dir: "v", clase: "base" }, { dir: "h", clase: "extra ext1" }], muestra: [b - 1, d - 1] });
+  // Segunda fracción: cortes horizontales; recibe los verticales en el paso 2.
+  const svgB = rectangulo({ cols: b, filas: d, claseCelda: (j, i) => i < c ? "naranja" : "blanco",
+    lineas: [{ dir: "h", clase: "base" }, { dir: "v", clase: "extra ext2" }], muestra: [b - 1, d - 1] });
+
+  // Resultado: rectángulos de N trozos. En la suma, los azules donde estaban
+  // y los naranjas llenando los huecos por columnas (y un segundo rectángulo
+  // si se pasa de un entero). En la resta, se tachan trozos azules.
+  const nRects = op === "+" && R > N ? 2 : 1;
+  const colMayor = [];  // orden de relleno: rectángulo, columna, fila
+  for (let r = 0; r < nRects; r++) for (let j = 0; j < b; j++) for (let i = 0; i < d; i++) colMayor.push([r, j, i]);
+  const clases = {};
+  const paso4 = n => Math.min(90, 1400 / Math.max(1, n));
+  if (op === "+") {
+    colMayor.forEach(([r, j, i]) => clases[[r, j, i]] = r === 0 && j < a ? "azul" : "blanco");
+    let k = 0;
+    for (const pos of colMayor) {
+      if (k >= B) break;
+      if (clases[pos] === "blanco") { clases[pos] = ["res-naranja", `transition-delay:${k * paso4(B)}ms`]; k++; }
+    }
+  } else if (!e.negativo) {
+    const azules = colMayor.filter(([r, j]) => r === 0 && j < a);
+    azules.forEach(p => clases[p] = "azul");
+    azules.slice(azules.length - B).reverse().forEach((p, k) => clases[p] = ["azul quitar", `transition-delay:${k * paso4(B)}ms`]);
+    colMayor.forEach(p => clases[p] ??= "blanco");
+  }
+  const tachones = (r) => (svg, cw, ch) => {
+    if (op !== "-" || e.negativo) return;
+    for (const [rr, j, i] of colMayor) {
+      const c = clases[[rr, j, i]];
+      if (rr !== r || !Array.isArray(c)) continue;
+      const g = el("g", { class: "tachon", style: c[1] }, svg);
+      const m = Math.min(cw, ch) * 0.18;
+      el("line", { x1: j * cw + m, y1: i * ch + m, x2: (j + 1) * cw - m, y2: (i + 1) * ch - m }, g);
+      el("line", { x1: (j + 1) * cw - m, y1: i * ch + m, x2: j * cw + m, y2: (i + 1) * ch - m }, g);
+    }
+  };
+  const svgsR = [];
+  for (let r = 0; r < nRects; r++)
+    svgsR.push(rectangulo({ cols: b, filas: d, claseCelda: (j, i) => clases[[r, j, i]] ?? "blanco",
+      lineas: [{ dir: "v", clase: "base" }, { dir: "h", clase: "base" }], extra: tachones(r) }));
+
+  const g = mcd(Math.abs(R), N);
+  const simp = g > 1 && R !== 0 ? `<span class="ver5">= ${N / g === 1 ? R / g : frac(R / g, N / g)}</span>` : "";
+  escena.append(
+    panel([svgA], `${frac(a, b)}<span class="ver1">= ${frac(A, N)}</span>`),
+    texto(signo),
+    panel([svgB], `${frac(c, d)}<span class="ver2">= ${frac(B, N)}</span>`),
+  );
+  // «=» y resultado, en un bloque que se ensancha en el paso 4: los
+  // rectángulos de la izquierda se desplazan solos para seguir centrados.
+  const cola = document.createElement("div");
+  cola.className = "cola";
+  cola.append(texto("="), panel(e.negativo ? [] : svgsR, e.negativo ? "" : `${frac(R, N)} ${simp}`, "panel-res"));
+  escena.append(cola);
+  ir(0);
+}
+
+function textos() {
+  const { a, b, c, d, op, N, A, B, R } = e;
+  const suma = op === "+", signo = suma ? "+" : "−";
+  const g = mcd(Math.abs(R), N), mcm = b * d / mcd(b, d);
+  const lista = [
+    ["Las dos fracciones",
+     `<p>Dibujamos ${frac(a, b)} con cortes <b>verticales</b> (${b} ${b === 1 ? "trozo" : "trozos"}) y ${frac(c, d)} con cortes <b>horizontales</b> (${d} ${d === 1 ? "trozo" : "trozos"}).</p>
+      <p>${b === d ? "Aquí los trozos ya son del mismo tamaño, pero vamos a ver qué hace el truco." : "Los trozos de un rectángulo y del otro no son del mismo tamaño: todavía no podemos contarlos para " + (suma ? "sumar" : "restar") + "."}</p>
+      ${e.negativo ? `<p class="aviso">La segunda fracción es mayor que la primera: el resultado sería negativo. Cambia el orden de las fracciones para verlo con rectángulos.</p>` : ""}`],
+    ["Los cortes del segundo, en el primero",
+     `<p>Cortamos el primer rectángulo también con los ${d - 1} ${d - 1 === 1 ? "corte horizontal" : "cortes horizontales"} del segundo. Cada trozo queda partido en ${d}.</p>
+      <p>La parte pintada <b>no cambia</b>; solo hay más trozos: ${frac(a, b)} = ${frac(a + " · " + d, b + " · " + d)} = ${frac(A, N)}.</p>`],
+    ["Los cortes del primero, en el segundo",
+     `<p>Y al segundo le hacemos los ${b - 1} ${b - 1 === 1 ? "corte vertical" : "cortes verticales"} del primero. Cada trozo queda partido en ${b}.</p>
+      <p>${frac(c, d)} = ${frac(c + " · " + b, d + " · " + b)} = ${frac(B, N)}.</p>`],
+    ["Trozos iguales",
+     `<p>Ahora los dos rectángulos están divididos en ${b} · ${d} = <b>${N}</b> trozos iguales: son ${nombre(N)}. Fíjate en el trozo marcado en rojo: mide lo mismo en los dos.</p>
+      <p>Ya podemos ${suma ? "sumar" : "restar"} contando trozos: ${frac(a, b)} ${signo} ${frac(c, d)} = ${frac(A, N)} ${signo} ${frac(B, N)}.</p>`],
+    [suma ? "Juntamos los trozos" : "Quitamos los trozos",
+     suma
+       ? `<p>Ponemos los ${A} trozos azules y añadimos los ${B} naranjas en los huecos: en total, ${A} + ${B} = <b>${R}</b> trozos de ${N}.</p>
+          ${R > N ? `<p>Son más de ${N}: no caben en un rectángulo, así que el resultado es <b>mayor que un entero</b>.</p>` : ""}`
+       : `<p>De los ${A} trozos azules quitamos (tachamos) ${B}, los que ocupa la segunda fracción: quedan ${A} − ${B} = <b>${R}</b> trozos de ${N}.</p>`],
+    ["Resultado",
+     `<p>${frac(a, b)} ${signo} ${frac(c, d)} = ${frac(A, N)} ${signo} ${frac(B, N)} = <b>${frac(R, N)}</b>${g > 1 && R !== 0 ? ` = <b>${N / g === 1 ? R / g : frac(R / g, N / g)}</b>` : ""}${R > N && R < 2 * N ? ` = 1 y ${frac(R - N, N)}` : ""}</p>
+      ${g > 1 && R !== 0 ? `<p>Se puede <b>simplificar</b> dividiendo arriba y abajo entre ${g}: es como juntar los trozos de ${g} en ${g}.</p>` : ""}
+      ${mcm < N ? `<p>Con el m.c.m. de ${b} y ${d}, que es <b>${mcm}</b>, bastaban ${nombre(mcm)}: el rectángulo da siempre un denominador común, pero no siempre el más pequeño.</p>` : ""}
+      ${R === 0 ? "<p>Las dos fracciones eran iguales: el resultado es 0.</p>" : ""}`],
+  ];
+  return lista;
+}
+
+function ir(n) {
+  paso = Math.max(0, Math.min(PASOS - 1, n));
+  if (e.negativo) paso = 0;
+  const escena = document.getElementById("escena");
+  for (let k = 1; k < PASOS; k++) escena.classList.toggle("s" + k, paso >= k);
+  const [titulo, texto] = textos()[paso];
+  document.getElementById("titulo-paso").textContent = `Paso ${paso + 1} de ${PASOS} · ${titulo}`;
+  document.getElementById("texto-paso").innerHTML = texto;
+  document.getElementById("anterior").disabled = paso === 0;
+  document.getElementById("siguiente").disabled = paso === PASOS - 1 || e.negativo;
+  document.getElementById("puntos").innerHTML = Array.from({ length: PASOS }, (_, k) => `<i class="${k <= paso ? "hecho" : ""}"></i>`).join("");
+}
+
+function ponerEjemplo(a, b, op, c, d) {
+  Object.entries({ a, b, c, d, op }).forEach(([k, v]) => document.getElementById(k).value = v);
+  construir();
+}
+
+document.getElementById("entrada").addEventListener("submit", ev => { ev.preventDefault(); construir(); });
+["a", "b", "c", "d", "op"].forEach(id => document.getElementById(id).addEventListener("change", construir));
+document.querySelectorAll("[data-ej]").forEach(bt => bt.addEventListener("click", () => ponerEjemplo(...bt.dataset.ej.split(","))));
+document.getElementById("azar").addEventListener("click", () => {
+  const r = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  let b, d, a, c, op;
+  do {
+    b = r(2, 6); d = r(2, 6); a = r(1, b - 1); c = r(1, d - 1); op = Math.random() < 0.5 ? "+" : "-";
+  } while (b === d || (op === "-" && a * d <= c * b));
+  ponerEjemplo(a, b, op, c, d);
+});
+document.getElementById("anterior").addEventListener("click", () => ir(paso - 1));
+document.getElementById("siguiente").addEventListener("click", () => ir(paso + 1));
+document.addEventListener("keydown", ev => {
+  if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
+  if (ev.target.tagName === "BUTTON" && ev.key === " ") return;  // el botón ya reacciona solo
+  if (ev.key === "ArrowRight" || ev.key === " ") { ev.preventDefault(); ir(paso + 1); }
+  if (ev.key === "ArrowLeft") { ev.preventDefault(); ir(paso - 1); }
+});
+
+construir();
+</script>
+</body>
+</html>

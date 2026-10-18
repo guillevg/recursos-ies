@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multiplicar y dividir fracciones</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=atkinson-hyperlegible-next:400,700&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .fino { stroke: var(--tinta); stroke-width: 0.8; stroke-dasharray: 3 3; }
+  .numero-grupo { font-size: 16px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  .unidad { font-size: 15px; text-anchor: middle; fill: var(--suave); }
+  .rotulo-lado { font-size: 20px; text-anchor: start; fill: var(--tinta); font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Multiplicar y dividir fracciones</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Operación">
+  <button type="button" role="tab" data-modo="deUna">Multiplicar: fracción de una fracción</button>
+  <button type="button" role="tab" data-modo="caben">Dividir: ¿cuántas veces cabe?</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="deUna">
+    <span class="frac-input"><input id="ma" class="corto" type="number" min="0" max="12" aria-label="Numerador de la primera fracción"><hr><input id="mb" class="corto" type="number" min="1" max="12" aria-label="Denominador de la primera fracción"></span>
+    de
+    <span class="frac-input"><input id="mc" class="corto" type="number" min="0" max="12" aria-label="Numerador de la segunda fracción"><hr><input id="md" class="corto" type="number" min="1" max="12" aria-label="Denominador de la segunda fracción"></span>
+  </span>
+  <span data-para="caben">
+    <span class="frac-input"><input id="da" class="corto" type="number" min="1" max="96" aria-label="Numerador del dividendo"><hr><input id="db" class="corto" type="number" min="1" max="12" aria-label="Denominador del dividendo (1 si es un número entero)"></span>
+    :
+    <span class="frac-input"><input id="dc" class="corto" type="number" min="1" max="12" aria-label="Numerador del divisor"><hr><input id="dd" class="corto" type="number" min="1" max="12" aria-label="Denominador del divisor"></span>
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Para dividir un número entero, pon 1 en su denominador (3 = 3/1).</p>
+
+<script src="pasos.js"></script>
+<script src="producto.js"></script>
+<script>
+"use strict";
+const { svg, frac, X0, ANCHO, llave, texto } = Pasos;
+const f = ([n, d]) => d === 1 ? `${n}` : frac(n, d);
+
+// ------------------------------------------------- fracción de una fracción
+function dibujarDeUna(r) {
+  const { a, b, c, d, n, total, simple } = r;
+  const g = Pasos.lienzo(330), W = 400, H = 240, x = 200, y = 30, cw = W / d, ch = H / b;
+  for (let j = 0; j < d; j++) for (let i = 0; i < b; i++) {
+    svg("rect", { x: x + j * cw, y: y + i * ch, width: cw + 0.3, height: ch + 0.3, class: "parte " + (j < c ? "azul" : "blanco") }, g);
+    if (j < c && i < a) svg("rect", { x: x + j * cw, y: y + i * ch, width: cw + 0.3, height: ch + 0.3, class: "parte naranja ver2" }, g);
+  }
+  for (let j = 1; j < d; j++) svg("line", { x1: x + j * cw, y1: y, x2: x + j * cw, y2: y + H, class: "corte" }, g);
+  for (let i = 1; i < b; i++) svg("line", { x1: x, y1: y + i * ch, x2: x + W, y2: y + i * ch, class: "corte ver1" }, g);
+  svg("rect", { x, y, width: W, height: H, class: "contorno" }, g);
+  svg("rect", { x: x + (d - 1) * cw, y: y + (b - 1) * ch, width: cw, height: ch, class: "resalte ver3 hasta4" }, g);
+  llave(g, { x1: x, x2: x + c * cw, y, h: H, arriba: false, texto: `${c}/${d}` });
+  if (a > 0) texto(g, { x: x + W + 14, y: y + a * ch / 2 + 6, t: `${a}/${b} de lo azul`, clase: "rotulo-lado ver2" });
+  const s = simple[0] !== n;
+  return [
+    ["Pintamos la segunda fracción", `<p>Dibujamos ${frac(c, d)}: cortamos el rectángulo en ${d} columnas y pintamos ${c}.</p><p>Queremos ${frac(a, b)} <b>de</b> esa parte azul.</p>`],
+    ["Cortamos en " + b, `<p>Para coger ${frac(a, b)} de lo azul, cortamos el rectángulo en ${b} filas iguales.</p>`],
+    ["Marcamos " + a + " de " + b, `<p>Dentro de lo azul, marcamos ${a} de las ${b} filas (en naranja): eso es ${frac(a, b)} de ${frac(c, d)}.</p>`],
+    ["¿De qué tamaño es cada trozo?", `<p>Ahora el rectángulo entero tiene ${b} · ${d} = <b>${total}</b> trozos iguales (el marcado en rojo es uno). Los naranjas son ${a} · ${c} = <b>${n}</b>.</p>`],
+    ["Resultado", `<p>${frac(a, b)} de ${frac(c, d)} = ${frac(a, b)} · ${frac(c, d)} = ${frac(`${a} · ${c}`, `${b} · ${d}`)} = <b>${frac(n, total)}</b>${s ? ` = <b>${f(simple)}</b>` : ""}</p>
+      <p>Se multiplican los numeradores (los trozos marcados) y los denominadores (los trozos en total). «De» quiere decir <b>multiplicar</b>.</p>
+      <p>El resultado es <b>más pequeño</b> que ${frac(c, d)}: multiplicar por una fracción menor que 1 hace más pequeño.</p>`],
+  ];
+}
+
+// ----------------------------------------------------------- ¿cuántas caben?
+function dibujarCaben(r) {
+  const { a, b, c, d, m, A, C, unidades, enteras, sobra, cociente, sobraFrac } = r;
+  const g = Pasos.lienzo(240), y = 90, h = 60, total = unidades * m, p = ANCHO / total, uw = ANCHO / unidades;
+  for (let k = 0; k < total; k++) svg("rect", { x: X0 + k * p, y, width: p + 0.3, height: h, class: "parte " + (k < A ? "azul" : "blanco") }, g);
+  // Grupos del tamaño del divisor, en naranja uno sí y otro no; lo que sobra, en gris.
+  for (let q = 0; q <= enteras; q++) {
+    const desde = q * C, hasta = Math.min(A, desde + C);
+    if (desde >= A) break;
+    const resto = hasta - desde < C;
+    if (resto) svg("rect", { x: X0 + desde * p, y, width: (hasta - desde) * p, height: h, class: "parte gris ver3" }, g);
+    else if (q % 2 === 0) svg("rect", { x: X0 + desde * p, y, width: C * p, height: h, class: "parte naranja " + (q === 0 ? "ver2" : "ver3") }, g);
+    if (!resto) texto(g, { x: X0 + (desde + C / 2) * p, y: y - 10, t: q + 1, clase: "numero-grupo " + (q === 0 ? "ver2" : "ver3") });
+  }
+  for (let k = 1; k < total; k++) if (k % m) svg("line", { x1: X0 + k * p, y1: y, x2: X0 + k * p, y2: y + h, class: "fino ver1" }, g);
+  for (let u = 1; u < unidades; u++) svg("line", { x1: X0 + u * uw, y1: y, x2: X0 + u * uw, y2: y + h, class: "corte" }, g);
+  svg("rect", { x: X0, y, width: ANCHO, height: h, class: "contorno" }, g);
+  for (let u = 0; u <= unidades; u++) texto(g, { x: X0 + u * uw, y: y + h + 22, t: u, clase: "unidad" });
+  llave(g, { x1: X0, x2: X0 + A * p, y: y - 20, h, arriba: true, texto: `${b === 1 ? a : a + "/" + b}` });
+  llave(g, { x1: X0, x2: X0 + C * p, y: y + 32, h, arriba: false, texto: `${c}/${d}`, clase: "ver2" });
+  const div = b === 1 ? `${a}` : frac(a, b);
+  const resultado = sobra === 0 ? `<b>${enteras}</b>` : `${enteras} y ${frac(sobraFrac[0], sobraFrac[1])} = <b>${f(cociente)}</b>`;
+  return [
+    ["Lo que vamos a repartir", `<p>Dividir ${div} : ${frac(c, d)} es preguntarse: <b>¿cuántas veces cabe ${frac(c, d)} en ${div}?</b></p><p>En azul, ${div} ${unidades === 1 && b > 1 ? "de una unidad" : "unidades"}.</p>`],
+    ["Trozos del mismo tamaño", `<p>Cortamos cada unidad en <b>${m}</b> trozos iguales${m !== d ? ` (${m} es el m.c.m. de ${b} y ${d})` : ""}: así, ${div} son ${A} trozos y ${frac(c, d)} son ${C}.</p>`],
+    ["Un grupo", `<p>Un grupo de ${frac(c, d)} ocupa ${C} ${C === 1 ? "trozo" : "trozos"} (en naranja, con la llave).</p>`],
+    ["¿Cuántos grupos caben?", `<p>Vamos poniendo grupos de ${C} trozos: caben <b>${enteras}</b> ${enteras === 1 ? "grupo" : "grupos"}${sobra ? ` y sobran ${sobra} ${sobra === 1 ? "trozo" : "trozos"} (en gris), que son ${frac(sobraFrac[0], sobraFrac[1])} de grupo` : ""}.</p>`],
+    ["Resultado", `<p>${div} : ${frac(c, d)} = ${resultado}.</p>
+      <p>Es lo mismo que multiplicar por la fracción dada la vuelta: ${div} · ${frac(d, c)} = ${f(cociente)}.</p>
+      <p>Dividir entre una fracción menor que 1 da un resultado <b>más grande</b> que el dividendo: caben muchos trozos pequeños.</p>`],
+  ];
+}
+
+const MODOS = {
+  deUna: { campos: { a: "ma", b: "mb", c: "mc", d: "md" }, dibujar: dibujarDeUna },
+  caben: { campos: { a: "da", b: "db", c: "dc", d: "dd" }, dibujar: dibujarCaben },
+};
+for (const [m, def] of Object.entries(MODOS))
+  Object.assign(def, { calcular: Producto.calcular[m], ejemplos: Producto.EJEMPLOS[m], azar: () => Producto.azar(m) });
+const elegirModo = Pasos.montar(MODOS, "deUna");
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- El modelo de área de las fracciones del proyecto: un rectángulo en
+       cuatro partes, tres pintadas (3/4), con los colores de las fichas. -->
+  <rect width="32" height="32" rx="7" fill="#3B6E8F"/>
+  <rect x="6" y="6" width="9" height="9" rx="1.5" fill="#f5b041"/>
+  <rect x="17" y="6" width="9" height="9" rx="1.5" fill="#f5b041"/>
+  <rect x="6" y="17" width="9" height="9" rx="1.5" fill="#f5b041"/>
+  <rect x="17" y="17" width="9" height="9" rx="1.5" fill="#ffffff"/>
+</svg>

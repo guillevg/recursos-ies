@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notación científica paso a paso</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=atkinson-hyperlegible-next:400,700&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .caja { fill: #fff; stroke: var(--tinta); stroke-width: 1.5; }
+  .caja.cero { fill: #e3e8ec; }
+  .cifra { font-size: 28px; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .cifra.cero { fill: var(--suave); }
+  .coma { font-size: 40px; text-anchor: middle; font-weight: 700; fill: var(--suave); }
+  .coma.nueva { fill: var(--rojo); }
+  .salto { fill: none; stroke: var(--acento); stroke-width: 2; }
+  .salto-txt { font-size: 15px; text-anchor: middle; fill: var(--acento); font-weight: 700; }
+  .grande { font-size: 34px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  .eje { stroke: var(--tinta); stroke-width: 2.5; }
+  .muesca { stroke: var(--tinta); stroke-width: 2; }
+  .potencia { font-size: 15px; text-anchor: middle; fill: var(--tinta); }
+  .punto-a { fill: var(--azul); stroke: var(--tinta); stroke-width: 1.5; }
+  .punto-b { fill: var(--naranja); stroke: var(--tinta); stroke-width: 1.5; }
+  .nombre { font-size: 17px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Notación científica paso a paso</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Tipo de ejercicio">
+  <button type="button" role="tab" data-modo="aCientifica">Escribir en notación científica</button>
+  <button type="button" role="tab" data-modo="desdeCientifica">De la notación científica al número</button>
+  <button type="button" role="tab" data-modo="comparar">Comparar tamaños</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="aCientifica">número: <input id="an" type="text" inputmode="decimal" size="18" aria-label="Número"></span>
+  <span data-para="desdeCientifica"><input id="dm" type="text" inputmode="decimal" class="corto" size="6" aria-label="Primera parte"> · 10 elevado a <input id="de" type="number" class="corto" min="-15" max="15" aria-label="Exponente"></span>
+  <span data-para="comparar">
+    <input id="ca" type="text" size="10" aria-label="Nombre de la primera cantidad">: <input id="cma" type="text" inputmode="decimal" class="corto" size="5" aria-label="Primera parte de la primera cantidad"> · 10^<input id="cna" type="number" class="corto" aria-label="Exponente de la primera cantidad">
+    y <input id="cb" type="text" size="10" aria-label="Nombre de la segunda cantidad">: <input id="cmb" type="text" inputmode="decimal" class="corto" size="5" aria-label="Primera parte de la segunda cantidad"> · 10^<input id="cnb" type="number" class="corto" aria-label="Exponente de la segunda cantidad">
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Los números se escriben con coma decimal (0,000007).</p>
+
+<script src="pasos.js"></script>
+<script src="notacion.js"></script>
+<script>
+"use strict";
+const { svg, num, texto } = Pasos;
+const pot = n => `10<sup>${n}</sup>`;
+const sup = n => String(n).replace("-", "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+
+// Fila de cajas con las cifras; devuelve la x de la frontera k (tras k cifras).
+function cifras(g, { cs, y, claseCaja = () => "" }) {
+  const bw = Math.min(50, 700 / cs.length), x0 = 400 - cs.length * bw / 2;
+  [...cs].forEach((d, k) => {
+    const c = claseCaja(k);
+    svg("rect", { x: x0 + k * bw, y, width: bw, height: 56, class: "caja " + c }, g);
+    texto(g, { x: x0 + (k + 0.5) * bw, y: y + 28, t: d, clase: "cifra " + c });
+  });
+  return k => x0 + k * bw;
+}
+const coma = (g, x, y, clase) => texto(g, { x, y: y + 66, t: ",", clase: "coma " + clase });
+
+// Saltos de la coma entre las fronteras `desde` y `hasta`, numerados.
+function saltos(g, X, desde, hasta, y, clase) {
+  const paso = hasta > desde ? 1 : -1;
+  for (let k = desde, i = 1; k !== hasta; k += paso, i++) {
+    const x1 = X(k), x2 = X(k + paso);
+    svg("path", { d: `M ${x1} ${y} Q ${(x1 + x2) / 2} ${y - 30} ${x2} ${y}`, class: "salto " + clase }, g);
+    texto(g, { x: (x1 + x2) / 2, y: y - 22, t: i, clase: "salto-txt " + clase });
+  }
+}
+
+// Texto «m · 10^n» con el exponente volado.
+function cientifica(g, { x, y, m, n, clase }) {
+  const t = svg("text", { x, y, class: "grande " + clase }, g);
+  t.textContent = `${m} · 10${sup(n)}`;
+}
+
+// --------------------------------------------------- escribir en notación científica
+function dibujarA(r) {
+  const { cifras: cs, coma: c, primera, exponente: n, mantisa, original } = r;
+  const g = Pasos.lienzo(260), y = 70;
+  const X = cifras(g, { cs, y, claseCaja: k => k < primera ? "cero" : "" });
+  coma(g, X(c), y, c === cs.length ? "hasta3" : "hasta3");
+  svg("rect", { x: X(primera), y: y - 4, width: X(primera + 1) - X(primera), height: 64, class: "resalte ver1 hasta3" }, g);
+  coma(g, X(primera + 1), y, "nueva ver1");
+  if (n !== 0) saltos(g, X, primera + 1, c, y - 8, "ver2");
+  cientifica(g, { x: 400, y: 220, m: mantisa, n, clase: "ver3" });
+  const grande = n > 0, cuantos = Math.abs(n);
+  return [
+    ["El número", `<p>${original}${c === cs.length ? " no tiene parte decimal: su coma estaría al final" : ""}. En notación científica se escribe como un número entre 1 y 10 multiplicado por una potencia de 10.</p>`],
+    ["La primera cifra que no es 0", `<p>La coma se pone justo detrás de la primera cifra que no es 0 (el ${cs[primera]}): así queda un número entre 1 y 10, <b>${mantisa}</b>.</p>`],
+    ["Contamos los saltos", n === 0 ? `<p>La coma ya estaba en su sitio: no hay que moverla.</p>` : `<p>Desde la coma nueva hasta donde estaba, hay <b>${cuantos}</b> ${cuantos === 1 ? "salto" : "saltos"} hacia la ${grande ? "derecha" : "izquierda"}.</p>`],
+    ["El exponente", `<p>${original} = <b>${mantisa} · ${pot(n)}</b>.</p>
+      <p>${grande ? `El número es <b>grande</b> (mayor que 10): el exponente es <b>positivo</b>.` : n < 0 ? `El número es <b>pequeño</b> (menor que 1): el exponente es <b>negativo</b>.` : "El número ya estaba entre 1 y 10: el exponente es 0."}</p>
+      <p>Comprobación: ${grande ? `multiplicar ${mantisa} por 10 ${cuantos} veces` : n < 0 ? `dividir ${mantisa} entre 10 ${cuantos} veces` : "10⁰ = 1"} devuelve ${original}.</p>`],
+  ];
+}
+
+// ------------------------------------------------- de la notación científica al número
+function dibujarD(r) {
+  const { mantisa, exponente: n, cifras: cs, comaInicial, comaFinal, derecha, izquierda, resultado } = r;
+  const g = Pasos.lienzo(290), y = 100;
+  const nuevo = k => k < izquierda || k >= cs.length - derecha;
+  const X = cifras(g, { cs, y, claseCaja: k => nuevo(k) ? "cero ver1" : "" });
+  coma(g, X(comaInicial), y, "hasta3");
+  if (n !== 0) saltos(g, X, comaInicial, comaFinal, y - 8, "ver2");
+  coma(g, X(comaFinal), y, "nueva ver3");
+  cientifica(g, { x: 400, y: 36, m: mantisa, n, clase: "" });
+  const t = svg("text", { x: 400, y: 255, class: "grande ver3" }, g); t.textContent = resultado;
+  const cuantos = Math.abs(n), derechaS = n > 0;
+  return [
+    ["El número en notación científica", `<p>${mantisa} · ${pot(n)}: el exponente ${n > 0 ? "es positivo, así que el número es grande" : n < 0 ? "es negativo, así que el número es pequeño" : "es 0: el número es el mismo"}.</p>`],
+    ["Ceros de relleno", derecha || izquierda ? `<p>La coma se va a mover ${cuantos} ${cuantos === 1 ? "lugar" : "lugares"} y no hay cifras suficientes: añadimos <b>${derecha || izquierda}</b> ${derecha + izquierda === 1 ? "cero" : "ceros"} ${derecha ? "a la derecha" : "a la izquierda"} (en gris).</p>` : `<p>Hay cifras suficientes: no hace falta añadir ceros.</p>`],
+    ["Movemos la coma", n === 0 ? `<p>No hay que moverla.</p>` : `<p>Multiplicar por ${pot(n)} es mover la coma <b>${cuantos}</b> ${cuantos === 1 ? "lugar" : "lugares"} hacia la ${derechaS ? "derecha" : "izquierda"}.</p>`],
+    ["El número", `<p>${mantisa} · ${pot(n)} = <b>${resultado}</b>.</p>`],
+  ];
+}
+
+// --------------------------------------------------------------- comparar
+function dibujarC(r) {
+  const { nombreA, nombreB, A, na, B, nb, la, lb, mayor, saltos: s, cociente, cocienteCient } = r;
+  const g = Pasos.lienzo(240), y = 120;
+  const lo = Math.floor(Math.min(la, lb)) - 1, hi = Math.ceil(Math.max(la, lb)) + 1;
+  const cada = Math.ceil((hi - lo) / 14), xs = v => Pasos.X0 + (v - lo) / (hi - lo) * Pasos.ANCHO;
+  svg("line", { x1: xs(lo), y1: y, x2: xs(hi), y2: y, class: "eje" }, g);
+  for (let k = lo; k <= hi; k++) {
+    svg("line", { x1: xs(k), y1: y - 7, x2: xs(k), y2: y + 7, class: "muesca" }, g);
+    if ((k - lo) % cada === 0) texto(g, { x: xs(k), y: y + 30, t: `10${sup(k)}`, clase: "potencia" });
+  }
+  // Saltos de ×10 entre las dos potencias.
+  if (s > 0 && s <= 20) {
+    const [k1, k2] = [Math.min(na, nb), Math.max(na, nb)];
+    for (let k = k1; k < k2; k++) {
+      svg("path", { d: `M ${xs(k)} ${y - 10} Q ${(xs(k) + xs(k + 1)) / 2} ${y - 40} ${xs(k + 1)} ${y - 10}`, class: "salto ver3" }, g);
+      if (s <= 10) texto(g, { x: (xs(k) + xs(k + 1)) / 2, y: y - 33, t: "×10", clase: "salto-txt ver3" });
+    }
+  }
+  svg("circle", { cx: xs(la), cy: y, r: 9, class: "punto-a ver1" }, g);
+  texto(g, { x: xs(la), y: y - 52, t: nombreA, clase: "nombre ver1" });
+  svg("circle", { cx: xs(lb), cy: y, r: 9, class: "punto-b ver2" }, g);
+  texto(g, { x: xs(lb), y: y + 62, t: nombreB, clase: "nombre ver2" });
+  const [nm, nM] = mayor === "A" ? [nombreB, nombreA] : [nombreA, nombreB];
+  const [mM, eM, mm, em] = mayor === "A" ? [A, na, B, nb] : [B, nb, A, na];
+  return [
+    ["La escala de potencias de 10", `<p>En esta recta, cada marca es 10 veces la anterior: de una marca a la siguiente se multiplica por 10.</p>`],
+    [nombreA, `<p>${nombreA}: ${num(A)} · ${pot(na)}. Está entre ${pot(Math.floor(la))} y ${pot(Math.floor(la) + 1)}.</p>`],
+    [nombreB, `<p>${nombreB}: ${num(B)} · ${pot(nb)}. Está entre ${pot(Math.floor(lb))} y ${pot(Math.floor(lb) + 1)}.</p>`],
+    ["¿Cuántos saltos?", `<p>De ${pot(em)} a ${pot(eM)} hay <b>${s}</b> ${s === 1 ? "salto" : "saltos"} de ×10: ${nM} es unas ${s === 0 ? "pocas veces" : `10${sup(s)} = ${num(10 ** s)} veces`} ${nm}, sin contar las primeras partes.</p>`],
+    ["Cuántas veces exactamente", `<p>(${num(mM)} · ${pot(eM)}) : (${num(mm)} · ${pot(em)}) = (${num(mM)} : ${num(mm)}) · ${pot(eM - em)} ≈ <b>${num(cocienteCient[0])} · ${pot(cocienteCient[1])}</b>${cocienteCient[1] <= 6 ? ` = ${num(cociente)}` : ""} veces.</p>
+      <p>Las primeras partes cambian un poco el resultado; los saltos dan el orden de magnitud.</p>`],
+  ];
+}
+
+const MODOS = {
+  aCientifica: { campos: { numero: "an" }, dibujar: dibujarA },
+  desdeCientifica: { campos: { mantisa: "dm", exponente: "de" }, dibujar: dibujarD },
+  comparar: { campos: { nombreA: "ca", ma: "cma", na: "cna", nombreB: "cb", mb: "cmb", nb: "cnb" }, dibujar: dibujarC },
+};
+for (const [m, def] of Object.entries(MODOS))
+  Object.assign(def, { calcular: Notacion.calcular[m], ejemplos: Notacion.EJEMPLOS[m], azar: () => Notacion.azar(m) });
+const elegirModo = Pasos.montar(MODOS, "aCientifica");
+</script>
+</body>
+</html>
