@@ -258,7 +258,7 @@ Repaso.tema("2eso", "SA1", {
           pasos = [`${c} − ${d} = ${sg(s)}`, `${b} · ${ent(s)} = ${sg(P)}`, `${ef} : ${f} = ${e}`, `${a} + ${ent(P)} − ${e} = <b>${sg(R)}</b>`];
         }
         return {
-          html: `Calcula respetando la jerarquía de las operaciones:<span class="expr">${expr}</span>`,
+          html: `Calcula respetando la jerarquía de las operaciones: <span class="expr">${expr}</span>`,
           pasos: ["jerarquia.html", "resolver", { expresion: expr.replace(/−/g, "-") }],
           campos: [{ id: "r", etiqueta: "Resultado" }],
           _ok: { r: String(R) },
