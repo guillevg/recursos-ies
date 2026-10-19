@@ -35,6 +35,7 @@
   <button type="button" role="tab" data-modo="variacion">Aumentos y descuentos</button>
   <button type="button" role="tab" data-modo="encadenados">Dos cambios seguidos</button>
   <button type="button" role="tab" data-modo="original">¿Cuánto era antes?</button>
+  <button type="button" role="tab" data-modo="formas">Fracción, decimal y porcentaje</button>
 </nav>
 
 <form class="entrada" id="entrada" autocomplete="off">
@@ -52,6 +53,10 @@
     <select id="os" aria-label="Subida o bajada"><option value="sube">subir un</option><option value="baja">bajar un</option></select>
     <input id="op" type="number" min="0.01" max="500" step="any" class="corto" aria-label="Porcentaje"> %, vale
     <input id="of" type="number" min="0.01" step="any" aria-label="Cantidad final">; ¿cuánto era antes?</span>
+  <span data-para="formas">
+    <span class="frac-input"><input id="fn" class="corto" type="number" min="1" max="99" aria-label="Numerador"><hr><input id="fd" class="corto" type="number" min="2" max="100" aria-label="Denominador"></span>
+    <select id="fdesde" aria-label="Qué se da"><option value="fraccion">se da la fracción</option><option value="porcentaje">se da el porcentaje</option></select>
+  </span>
   <button type="submit" class="principal">Empezar</button>
   <div class="ejemplos" id="ejemplos"></div>
 </form>
@@ -217,12 +222,44 @@ function dibujarOriginal(r) {
   ];
 }
 
+// ------------------------------------------- fracción, decimal y porcentaje
+// La barra entera es 1, el 100 %: d trozos y n pintados. Desde el porcentaje,
+// los cortes aparecen al llegar a la fracción.
+function dibujarFormas(r) {
+  const { n, d, desde, ns, ds, dec, pc: p } = r, y = 100, deFr = desde === "fraccion";
+  const ex = x => String(Math.round(x * 1e6) / 1e6).replace(".", ",");   // sin redondear a dos decimales (3/8 = 0,375)
+  const [bn, bd] = deFr ? [n, d] : [ns, ds];   // desde el %, la barra ya en la fracción simplificada
+  const g = Pasos.lienzo(230);
+  const t = Pasos.barra(g, { y, partes: bd, color: k => k < bn ? "azul" : "blanco", cortes: deFr ? "" : "ver2" });
+  const xn = X0 + bn * t, F = frac(n, d);
+  texto(g, { x: X0 + ANCHO, y: y - 14, t: deFr ? "1 = 100 %" : "100 %", clase: "rotulo-llave suave " + (deFr ? "ver2" : ""), ancla: "end" });
+  Pasos.llave(g, { x1: X0, x2: xn, y, arriba: true, texto: pc(p), clase: deFr ? "ver2" : "" });
+  Pasos.llave(g, { x1: X0, x2: xn, y, arriba: false, texto: `${bn}/${bd}`, clase: deFr ? "" : "ver2" });
+  texto(g, { x: X0 + ANCHO / 2, y: y + 120, t: deFr ? `${n} : ${d} = ${ex(dec)}` : `${pc(p)} = ${ex(p)} : 100 = ${ex(dec)}`, clase: "rotulo-llave ver1" });
+  const sobre100 = Number.isInteger(p) ? frac(p, 100) : frac(p * 10, 1000);
+  const simpl = !Number.isInteger(p) || ds !== 100 ? ` = ${frac(ns, ds)}` : "";
+  const fin = ["Las tres formas", `<p>${frac(ns, ds)} = <b>${ex(dec)}</b> = <b>${pc(p)}</b>: es la misma cantidad escrita de tres maneras.</p>`];
+  if (deFr) return [
+    ["La fracción", `<p>La barra entera es 1. Está cortada en ${d} trozos iguales y hay ${n} pintados: ${F}.</p>`],
+    ["El decimal", `<p>Una fracción es una división: ${n} : ${d} = <b>${ex(dec)}</b>.</p>`],
+    ["El porcentaje", `<p>Porcentaje quiere decir «de cada 100». La barra entera es el 100 %, así que ${ex(dec)} · 100 = <b>${pc(p)}</b>.</p>`],
+    fin,
+  ];
+  return [
+    ["El porcentaje", `<p>${pc(p)} quiere decir ${ex(p)} de cada 100. La barra entera es el 100 %.</p>`],
+    ["El decimal", `<p>${ex(p)} de cada 100 es ${ex(p)} : 100 = <b>${ex(dec)}</b>.</p>`],
+    ["La fracción", `<p>${pc(p)} = ${sobre100}${Number.isInteger(p) ? "" : ` (multiplicando arriba y abajo por 10 para quitar la coma)`}${simpl}. Simplificada: la barra queda en ${ds} trozos y hay ${ns} pintados.</p>`],
+    fin,
+  ];
+}
+
 const MODOS = {
   de: { campos: { p: "dp", total: "dt" }, dibujar: dibujarDe },
   que: { campos: { parte: "qp", total: "qt" }, dibujar: dibujarQue },
   variacion: { campos: { total: "vt", sentido: "vs", p: "vp" }, dibujar: dibujarVariacion },
   encadenados: { campos: { total: "et", s1: "es1", p1: "ep1", s2: "es2", p2: "ep2" }, dibujar: dibujarEncadenados },
   original: { campos: { final: "of", sentido: "os", p: "op" }, dibujar: dibujarOriginal },
+  formas: { campos: { n: "fn", d: "fd", desde: "fdesde" }, dibujar: dibujarFormas },
 };
 for (const [m, def] of Object.entries(MODOS))
   Object.assign(def, { calcular: Porcentajes.calcular[m], ejemplos: Porcentajes.EJEMPLOS[m], azar: () => Porcentajes.azar(m) });

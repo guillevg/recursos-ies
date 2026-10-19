@@ -1,7 +1,8 @@
 // Porcentajes con la recta doble (arriba, los porcentajes; abajo, las
-// cantidades), paso a paso. Tres modos: el tanto por ciento de una
-// cantidad (también mayor que 100 % y menor que 1 %), qué porcentaje es una
-// parte y aumentos o descuentos con su multiplicador. Cálculos separados del
+// cantidades), paso a paso. Modos: el tanto por ciento de una cantidad
+// (también mayor que 100 % y menor que 1 %), qué porcentaje es una parte,
+// aumentos o descuentos con su multiplicador (uno o dos seguidos), cuánto era
+// antes y la misma cantidad como fracción, decimal y porcentaje. Cálculos separados del
 // dibujo para probarlos con Node; el dibujo está en porcentajes.html.
 "use strict";
 
@@ -67,7 +68,18 @@ const Porcentajes = (() => {
     return { final: f, p, sentido, pFinal, m, inicio, uno, malo: redondo(sentido === "sube" ? f * (1 - p / 100) : f * (1 + p / 100)) };
   }
 
-  const calcular = { de, que, variacion, encadenados, original };
+  // La misma cantidad en tres formas: fracción n/d, decimal y porcentaje.
+  // `desde`: "fraccion" (se da la fracción) o "porcentaje" (se da el %).
+  function formas({ n, d, desde }) {
+    if (!(Number.isInteger(n) && Number.isInteger(d) && n >= 1 && n < d && d <= 100)) return { error: "La fracción tiene que estar entre 0 y 1, con el denominador hasta 100." };
+    let q = d; while (q % 2 === 0) q /= 2; while (q % 5 === 0) q /= 5;
+    const mcd = (x, y) => y ? mcd(y, x % y) : x, g = mcd(n, d), ns = n / g, ds = d / g;
+    let k = ds; while (k % 2 === 0) k /= 2; while (k % 5 === 0) k /= 5;
+    if (k !== 1) return { error: "Elige una fracción con decimal exacto: el denominador, simplificado, solo con doses y cincos (2, 4, 5, 8, 10, 20, 25…)." };
+    return { n, d, desde, ns, ds, dec: redondo(n / d), pc: redondo(100 * n / d) };
+  }
+
+  const calcular = { de, que, variacion, encadenados, original, formas };
 
   const EJEMPLOS = {
     de: [
@@ -99,8 +111,18 @@ const Porcentajes = (() => {
     { etiqueta: "Se vende a 54 € (+35 %)", final: 54, p: 35, sentido: "sube", texto: "Un comerciante vende un artículo a 54 €, un 35 % más caro de lo que le costó. ¿Cuánto le costó?" },
   ];
 
+  EJEMPLOS.formas = [
+    { etiqueta: "3/4", n: 3, d: 4, desde: "fraccion", texto: "Escribe 3/4 como número decimal y como porcentaje." },
+    { etiqueta: "3/8", n: 3, d: 8, desde: "fraccion", texto: "Escribe 3/8 como número decimal y como porcentaje." },
+    { etiqueta: "35 %", n: 7, d: 20, desde: "porcentaje", texto: "Escribe 35 % como número decimal y como fracción." },
+  ];
+
   function azar(modo, r = Math.random) {
     const ent = (lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+    if (modo === "formas") {
+      const [n, d] = [[1, 2], [1, 4], [3, 4], [1, 5], [2, 5], [3, 5], [4, 5], [1, 8], [3, 8], [5, 8], [7, 8], [3, 10], [7, 10], [9, 10], [1, 20], [3, 20], [7, 20], [4, 25], [6, 25], [1, 50]][ent(0, 19)];
+      return { n, d, desde: r() < 0.5 ? "fraccion" : "porcentaje" };
+    }
     const p = [5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 2, 3, 7, 12, 150, 120][ent(0, 15)];
     if (modo === "de") return { p, total: ent(2, 50) * 20 };
     if (modo === "encadenados") {

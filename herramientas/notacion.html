@@ -24,6 +24,13 @@
   .punto-a { fill: var(--azul); stroke: var(--tinta); stroke-width: 1.5; }
   .punto-b { fill: var(--naranja); stroke: var(--tinta); stroke-width: 1.5; }
   .nombre { font-size: 17px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  .lineas { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0.5rem 0; }
+  .linea { font-size: 1.6rem; display: flex; align-items: center; gap: 0.3em; flex-wrap: wrap; justify-content: center; }
+  .linea .igual { color: var(--suave); }
+  .linea .resultado { font-weight: 700; color: var(--acento); }
+  .linea .f { font-size: 0.9em; }
+  .tachado { color: var(--rojo); text-decoration: line-through; text-decoration-thickness: 2px; }
+  @media (max-width: 640px) { .linea { font-size: 1.15rem; } }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
 <script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
@@ -38,6 +45,7 @@
   <button type="button" role="tab" data-modo="aCientifica">Escribir en notación científica</button>
   <button type="button" role="tab" data-modo="desdeCientifica">De la notación científica al número</button>
   <button type="button" role="tab" data-modo="comparar">Comparar tamaños</button>
+  <button type="button" role="tab" data-modo="potencias">Potencias de la misma base</button>
 </nav>
 
 <form class="entrada" id="entrada" autocomplete="off">
@@ -46,6 +54,13 @@
   <span data-para="comparar">
     <input id="ca" type="text" size="10" aria-label="Nombre de la primera cantidad">: <input id="cma" type="text" inputmode="decimal" class="corto" size="5" aria-label="Primera parte de la primera cantidad"> · 10^<input id="cna" type="number" class="corto" aria-label="Exponente de la primera cantidad">
     y <input id="cb" type="text" size="10" aria-label="Nombre de la segunda cantidad">: <input id="cmb" type="text" inputmode="decimal" class="corto" size="5" aria-label="Primera parte de la segunda cantidad"> · 10^<input id="cnb" type="number" class="corto" aria-label="Exponente de la segunda cantidad">
+  </span>
+  <span data-para="potencias">
+    <select id="pt" aria-label="Operación"><option value="producto">aᵐ · aⁿ</option><option value="cociente">aᵐ : aⁿ</option><option value="potencia">(aᵐ)ⁿ</option><option value="exponente">aⁿ · bⁿ</option></select>
+    a = <input id="pa" type="number" class="corto" min="2" max="99" aria-label="Base a">
+    m = <input id="pm" type="number" class="corto" min="0" max="12" aria-label="Exponente m">
+    n = <input id="pn" type="number" class="corto" min="1" max="12" aria-label="Exponente n">
+    b = <input id="pb" type="number" class="corto" min="0" max="99" aria-label="Base b (solo en aⁿ · bⁿ)">
   </span>
   <button type="submit" class="principal">Empezar</button>
   <div class="ejemplos" id="ejemplos"></div>
@@ -70,7 +85,7 @@
 <script src="notacion.js"></script>
 <script>
 "use strict";
-const { svg, num, texto } = Pasos;
+const { svg, num, texto, frac } = Pasos;
 const pot = n => `10<sup>${n}</sup>`;
 const sup = n => String(n).replace("-", "⁻").replace(/\d/g, d => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
 
@@ -187,10 +202,50 @@ function dibujarC(r) {
   ];
 }
 
+// ------------------------------------------------------ potencias de la misma base
+function dibujarPotencias(r) {
+  const { tipo, a, m, n, b, base, exp, valor } = r;
+  const P = (x, e) => `${x}<sup>${e}</sup>`, rep = (x, k) => Array(k).fill(x).join(" · "), igual = '<span class="igual">=</span>';
+  const fin = `${igual}<span class="resultado">${P(base, exp)}</span>${valor !== null && exp > 1 ? ` ${igual} ${num(valor)}` : ""}`;
+  let ls, textos;
+  if (tipo === "producto") {
+    ls = [`${P(a, m)} · ${P(a, n)}`, `${igual} (${rep(a, m)}) · (${rep(a, n)})`, `${igual} ${rep(a, m + n)}`, fin];
+    textos = [["La operación", `<p>Multiplicamos dos potencias con la <b>misma base</b>, ${a}.</p>`],
+      ["Cada potencia es una multiplicación", `<p>${P(a, m)} son ${m} factores iguales a ${a}, y ${P(a, n)} son ${n}.</p>`],
+      ["Contamos los factores", `<p>Sin paréntesis, quedan ${m} + ${n} = <b>${exp}</b> factores iguales a ${a}.</p>`],
+      ["Una sola potencia", `<p>${P(a, m)} · ${P(a, n)} = ${P(a, exp)}: al multiplicar potencias de la misma base, <b>los exponentes se suman</b>.</p>`]];
+  } else if (tipo === "cociente") {
+    const tach = k => [...Array(k).fill(`<span class="tachado">${a}</span>`)].join(" · ");
+    ls = [`${P(a, m)} : ${P(a, n)}`, `${igual} ${frac(rep(a, m), rep(a, n))}`, `${igual} ${frac(`${tach(n)} · ${rep(a, m - n)}`, tach(n))}`, `${igual} ${rep(a, exp)}`, fin];
+    textos = [["La operación", `<p>Dividimos dos potencias con la <b>misma base</b>, ${a}.</p>`],
+      ["Como una fracción", `<p>Arriba, ${m} factores iguales a ${a}; abajo, ${n}.</p>`],
+      ["Simplificamos", `<p>Cada ${a} de abajo se va con uno de arriba: se van ${n} de cada lado.</p>`],
+      ["Lo que queda", `<p>Arriba quedan ${m} − ${n} = <b>${exp}</b> factores.</p>`],
+      ["Una sola potencia", `<p>${P(a, m)} : ${P(a, n)} = ${P(a, exp)}: al dividir potencias de la misma base, <b>los exponentes se restan</b>.</p>`]];
+  } else if (tipo === "potencia") {
+    ls = [`(${P(a, m)})<sup>${n}</sup>`, `${igual} ${rep(P(a, m), n)}`, `${igual} ${P(a, Array(n).fill(m).join(" + "))}`, fin];
+    textos = [["La operación", `<p>Una potencia elevada a otro exponente: (${P(a, m)})<sup>${n}</sup>.</p>`],
+      [`${n} veces ${P(a, m)}`, `<p>Elevar a ${n} es multiplicar ${P(a, m)} por sí misma ${n} veces.</p>`],
+      ["Misma base", `<p>Es un producto de potencias de la misma base: los exponentes se suman.</p>`],
+      ["Una sola potencia", `<p>${Array(n).fill(m).join(" + ")} = ${n} · ${m} = <b>${exp}</b>: en una potencia de una potencia, <b>los exponentes se multiplican</b>.</p>`]];
+  } else {
+    ls = [`${P(a, n)} · ${P(b, n)}`, `${igual} (${rep(a, n)}) · (${rep(b, n)})`, `${igual} ${rep(`(${a} · ${b})`, n)}`, fin];
+    textos = [["La operación", `<p>Dos potencias con <b>el mismo exponente</b>, ${n}, y bases distintas.</p>`],
+      ["Cada potencia es una multiplicación", `<p>${n} factores iguales a ${a} y ${n} iguales a ${b}.</p>`],
+      ["Por parejas", `<p>Juntamos cada ${a} con un ${b}: salen ${n} parejas, y cada pareja es ${a} · ${b} = ${base}.</p>`],
+      ["Una sola potencia", `<p>${P(a, n)} · ${P(b, n)} = ${P(base, n)}: se multiplican las bases y <b>el exponente no cambia</b>.</p>`]];
+  }
+  const escena = document.getElementById("escena");
+  escena.className = "escena";
+  escena.innerHTML = `<div class="lineas">${ls.map((l, k) => `<div class="linea ver${k}">${l}</div>`).join("")}</div>`;
+  return textos;
+}
+
 const MODOS = {
   aCientifica: { campos: { numero: "an" }, dibujar: dibujarA },
   desdeCientifica: { campos: { mantisa: "dm", exponente: "de" }, dibujar: dibujarD },
   comparar: { campos: { nombreA: "ca", ma: "cma", na: "cna", nombreB: "cb", mb: "cmb", nb: "cnb" }, dibujar: dibujarC },
+  potencias: { campos: { tipo: "pt", a: "pa", m: "pm", n: "pn", b: "pb" }, dibujar: dibujarPotencias },
 };
 for (const [m, def] of Object.entries(MODOS))
   Object.assign(def, { calcular: Notacion.calcular[m], ejemplos: Notacion.EJEMPLOS[m], azar: () => Notacion.azar(m) });

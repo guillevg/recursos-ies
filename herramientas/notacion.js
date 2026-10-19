@@ -1,7 +1,8 @@
 // Notación científica paso a paso. Tres modos: escribir un número en
 // notación científica (mover la coma y contar los saltos), pasar de la
 // notación científica al número y comparar dos tamaños en una escala de
-// potencias de 10. Se trabaja con las cifras como texto, sin redondeos de la
+// potencias de 10. Y uno más con las potencias de la misma base (o del mismo
+// exponente), escribiendo los factores uno a uno. Se trabaja con las cifras como texto, sin redondeos de la
 // coma flotante. Cálculos separados del dibujo para probarlos con Node; el
 // dibujo está en notacion.html.
 "use strict";
@@ -69,7 +70,24 @@ const Notacion = (() => {
     return { nombreA, nombreB, A, na, B, nb, la, lb, mayor, menor, saltos, cociente, cocienteCient: [Math.round(man * 100) / 100, exp] };
   }
 
-  const calcular = { aCientifica, desdeCientifica, comparar };
+  // Potencias de la misma base (o del mismo exponente): producto a^m · a^n,
+  // cociente a^m : a^n, potencia de una potencia (a^m)^n y a^n · b^n.
+  function potencias({ tipo, a, m, n, b }) {
+    const ent = x => Number.isInteger(x) && x >= 1;
+    if (!ent(a) || a < 2 || a > 99) return { error: "La base tiene que ser un número entero entre 2 y 99." };
+    if (!ent(n) || (tipo !== "exponente" && !ent(m))) return { error: "Los exponentes tienen que ser números enteros mayores que 0." };
+    let base = a, exp;
+    if (tipo === "producto") exp = m + n;
+    else if (tipo === "cociente") { if (!(m > n)) return { error: "En el cociente, el primer exponente tiene que ser mayor que el segundo." }; exp = m - n; }
+    else if (tipo === "potencia") exp = m * n;
+    else if (tipo === "exponente") { if (!ent(b) || b < 2 || b > 99) return { error: "La segunda base tiene que ser un número entero entre 2 y 99." }; base = a * b; exp = n; }
+    else return { error: "Elige el tipo de operación." };
+    if (Math.max(tipo === "exponente" ? n : 0, m || 0, exp) > 12) return { error: "Para escribir los factores uno a uno, los exponentes tienen que ser como mucho 12." };
+    const valor = base ** exp;
+    return { tipo, a, m, n, b, base, exp, valor: valor <= 1e9 ? valor : null };
+  }
+
+  const calcular = { aCientifica, desdeCientifica, comparar, potencias };
 
   const EJEMPLOS = {
     aCientifica: [
@@ -88,10 +106,24 @@ const Notacion = (() => {
       { etiqueta: "Sol y Tierra", nombreA: "Sol", ma: "2", na: 30, nombreB: "Tierra", mb: "6", nb: 24, texto: "La masa del Sol es de unos 2 · 10³⁰ kg y la de la Tierra, de 6 · 10²⁴ kg. ¿Cuántas veces más masivo es el Sol?" },
       { etiqueta: "Luna y vuelta a la Tierra", nombreA: "Tierra-Luna", ma: "3,844", na: 5, nombreB: "vuelta a la Tierra", mb: "4", nb: 4, texto: "La Luna está a 3,844 · 10⁵ km y una vuelta a la Tierra mide unos 4 · 10⁴ km. ¿Cuántas vueltas a la Tierra son la distancia a la Luna?" },
     ],
+    potencias: [
+      { etiqueta: "2³ · 2⁴", tipo: "producto", a: 2, m: 3, n: 4, b: 0, texto: "Escribe como una sola potencia: 2³ · 2⁴." },
+      { etiqueta: "5⁶ : 5²", tipo: "cociente", a: 5, m: 6, n: 2, b: 0, texto: "Escribe como una sola potencia: 5⁶ : 5²." },
+      { etiqueta: "(3²)⁴", tipo: "potencia", a: 3, m: 2, n: 4, b: 0, texto: "Escribe como una sola potencia: (3²)⁴." },
+      { etiqueta: "2³ · 5³", tipo: "exponente", a: 2, m: 0, n: 3, b: 5, texto: "Escribe como una sola potencia: 2³ · 5³." },
+    ],
   };
 
   function azar(modo, r = Math.random) {
     const ent = (lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+    if (modo === "potencias") {
+      const tipo = ["producto", "cociente", "potencia", "exponente"][ent(0, 3)], a = [2, 3, 5, 7, 10][ent(0, 4)];
+      if (tipo === "producto") return { tipo, a, m: ent(2, 5), n: ent(2, 5), b: 0 };
+      if (tipo === "cociente") { const m = ent(4, 8); return { tipo, a, m, n: ent(2, m - 1), b: 0 }; }
+      if (tipo === "potencia") return { tipo, a, m: ent(2, 4), n: ent(2, 3), b: 0 };
+      const [x, y] = [[2, 5], [2, 3], [3, 5], [2, 7], [4, 5], [5, 3]][ent(0, 5)];
+      return { tipo, a: x, m: 0, n: ent(2, 4), b: y };
+    }
     const sig = () => String(ent(1, 9)) + (r() < 0.6 ? String(ent(0, 99)).padStart(2, "0").replace(/0+$/, "") : "");
     if (modo === "aCientifica") {
       const s = sig(), n = ent(-8, 9);

@@ -278,19 +278,19 @@ Repaso.tema("2eso", "SA1", {
     inversa: {
       titulo: "Comprobar con la operación inversa",
       sub: "La suma deshace la resta; la multiplicación, la división",
-      herramienta: ["Jerarquía de las operaciones", "jerarquia.html"],
+      herramienta: ["Comprobar con la operación inversa", "jerarquia.html#inversa"],
       pista: "Para comprobar una resta, suma el resultado y lo que se restó: tiene que salir el primer número. Para una división, multiplica el resultado por el divisor. Para una raíz cuadrada, eleva el resultado al cuadrado.",
       nuevo() {
         const tipo = elegir(["resta", "division", "raiz"]);
-        let enun, inv, valor, debe, real, c;
+        let enun, inv, valor, debe, real, c, a, b = 0;
         if (tipo === "resta") {
-          const a = azar(120, 999), b = azar(30, a - 20); real = a - b;
+          a = azar(120, 999); b = azar(30, a - 20); real = a - b;
           c = real + elegir([0, 0, 0, 10, -10, 1, -1]); enun = `${a} − ${b} = ${c}`; inv = `${c} + ${b}`; valor = c + b; debe = a;
         } else if (tipo === "division") {
-          const b = azar(3, 19); real = azar(4, 40); const a = b * real;
+          b = azar(3, 19); real = azar(4, 40); a = b * real;
           c = real + elegir([0, 0, 0, 1, -1, 10]); enun = `${a} : ${b} = ${c}`; inv = `${c} · ${b}`; valor = c * b; debe = a;
         } else {
-          real = azar(11, 25); const a = real * real;
+          real = azar(11, 25); a = real * real;
           c = real + elegir([0, 0, 0, 1, -1]); enun = `√${a} = ${c}`; inv = `${pot(c, 2)}`; valor = c * c; debe = a;
         }
         const correcta = c === real;
@@ -298,6 +298,7 @@ Repaso.tema("2eso", "SA1", {
           html: `Alguien ha calculado <span class="dato">${enun}</span>. Compruébalo con la operación inversa: ¿es correcto?`,
           trabajo: `<div class="linea-op"><span>${inv}</span><span class="op">=</span>${NUM("v", "ancho")}</div>
                     <div class="campos centrado"><div class="campo"><label for="f-ok">¿Es correcto?</label>${SELECT("ok", [["si", "Sí, es correcto"], ["no", "No, está mal"]])}</div></div>`,
+          pasos: ["jerarquia.html", "inversa", { operacion: tipo, a, b, c }],
           _ok: { v: String(valor), ok: correcta ? "si" : "no" },
           comprobar(v) {
             const x = num(v.v), ok = v.ok === (correcta ? "si" : "no");
@@ -425,7 +426,7 @@ Repaso.tema("2eso", "SA1", {
     mayormenor: {
       titulo: "¿Mayor o menor?",
       sub: "Multiplicar y dividir por números menores que 1",
-      herramienta: ["Multiplicar y dividir fracciones", "producto.html"],
+      herramienta: ["¿Mayor o menor?", "producto.html#efecto"],
       pista: "Multiplicar por un número menor que 1 hace el resultado más pequeño; por uno mayor que 1, más grande. Con la división pasa al revés: dividir entre 0,5 es ver cuántas mitades caben, y caben el doble.",
       nuevo() {
         const OPS = [["·", .5, ": 2"], ["·", .25, ": 4"], ["·", .2, ": 5"], ["·", .8, null], ["·", 1.2, null], ["·", 1.5, null], ["·", 2.5, null],
@@ -437,6 +438,7 @@ Repaso.tema("2eso", "SA1", {
           html: "Primero decide sin calcular si el resultado será mayor o menor. Después calcúlalo.",
           trabajo: `<div class="linea-op"><span>${N} ${op} ${fmt(k)}</span><span class="op">es</span>${SELECT("mm", [["mayor", "mayor"], ["menor", "menor"]])}<span class="op">que ${N}</span></div>
                     <div class="linea-op"><span>${N} ${op} ${fmt(k)}</span><span class="op">=</span>${NUM("r", "ancho")}</div>`,
+          pasos: ["producto.html", "efecto", { N, op, k }],
           _ok: { mm: mayor ? "mayor" : "menor", r: fmt(r) },
           comprobar(v) {
             const mal = [];
@@ -454,7 +456,7 @@ Repaso.tema("2eso", "SA1", {
     factorcomun: {
       titulo: "Sacar factor común",
       sub: "Cálculo mental con la propiedad distributiva",
-      herramienta: ["Jerarquía de las operaciones", "jerarquia.html"],
+      herramienta: ["Sacar factor común", "jerarquia.html#factorComun"],
       pista: "Busca el número que se repite en los dos productos: ese es el factor común. Lo sacas fuera y dentro del paréntesis quedan los otros dos números. Así la cuenta se hace de cabeza.",
       nuevo() {
         const a = azar(101, 999), op = Math.random() < .5 ? "+" : "-";
@@ -465,6 +467,7 @@ Repaso.tema("2eso", "SA1", {
         return {
           html: "Saca factor común y calcula de cabeza.",
           trabajo: `<div class="linea-op"><span>${a} · ${b} ${SIGNO(op)} ${a} · ${c}</span><span class="op">=</span>${NUM("f")}<span class="op">· (</span>${NUM("x")}<span class="op">${SIGNO(op)}</span>${NUM("y")}<span class="op">) =</span>${NUM("r", "ancho")}</div>`,
+          pasos: ["jerarquia.html", "factorComun", { a, b, c, op: op === "+" ? "+" : "−" }],
           _ok: { f: String(a), x: String(b), y: String(c), r: String(R) },
           comprobar(v) {
             const f = num(v.f), x = num(v.x), y = num(v.y), r = num(v.r), mal = [];
@@ -485,7 +488,7 @@ Repaso.tema("2eso", "SA1", {
     potencias: {
       titulo: "Potencias de la misma base",
       sub: "Producto, cociente y potencia de una potencia",
-      herramienta: ["Notación científica paso a paso", "notacion.html"],
+      herramienta: ["Potencias de la misma base", "notacion.html#potencias"],
       pista: "Escribe cada potencia como una multiplicación y cuenta los factores. Al multiplicar potencias de la misma base, los exponentes se suman; al dividir, se restan; en una potencia de una potencia, se multiplican.",
       variantes: [["todas", "Mezcladas"], ["producto", "Producto"], ["cociente", "Cociente"], ["potencia", "Potencia de potencia"], ["exponente", "Mismo exponente"]],
       nuevo(variante = "todas") {
@@ -504,6 +507,8 @@ Repaso.tema("2eso", "SA1", {
         return {
           html: `Escribe como una sola potencia${pideValor ? " y calcula su valor" : ""}.`,
           trabajo: `<div class="linea-op"><span>${expr}</span><span class="op">=</span><span class="potencia-in">${NUM("b")}${NUM("e", "sup")}</span>${pideValor ? `<span class="op">=</span>${NUM("v", "ancho")}` : ""}</div>`,
+          // En «mismo exponente», m y b2 son las dos bases.
+          pasos: ["notacion.html", "potencias", tipo === "exponente" ? { tipo, a: m, m: 0, n, b: b2 } : { tipo, a, m, n, b: 0 }],
           _ok: pideValor ? { b: String(base), e: String(exp), v: String(valor) } : { b: String(base), e: String(exp) },
           comprobar(v) {
             const b = num(v.b), e = num(v.e), mal = [];
@@ -562,7 +567,7 @@ Repaso.tema("2eso", "SA1", {
     formas: {
       titulo: "La misma cantidad, tres formas",
       sub: "Fracción, decimal y porcentaje",
-      herramienta: ["Porcentajes con la recta doble", "porcentajes.html"],
+      herramienta: ["Fracción, decimal y porcentaje", "porcentajes.html#formas"],
       pista: "Porcentaje es «de cada 100». Para pasar una fracción a decimal, divide el numerador entre el denominador; para pasar el decimal a porcentaje, multiplica por 100.",
       nuevo() {
         const [n, d] = elegir([[1,2],[1,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,8],[3,8],[5,8],[7,8],[3,10],[7,10],[9,10],[1,20],[3,20],[7,20],[4,25],[6,25],[1,50]]);
@@ -571,6 +576,7 @@ Repaso.tema("2eso", "SA1", {
         if (Math.random() < .5) return {
           html: `Escribe ${F(n, d)} como número decimal y como porcentaje.`,
           campos: [{ id: "dec", etiqueta: "Decimal" }, { id: "pc", etiqueta: "Porcentaje (%)" }],
+          pasos: ["porcentajes.html", "formas", { n, d, desde: "fraccion" }],
           _ok: { dec: fmt(dec), pc: fmt(pc) },
           comprobar(v) {
             const mal = [];
@@ -585,6 +591,7 @@ Repaso.tema("2eso", "SA1", {
         return {
           html: `Escribe <span class="dato">${fmt(pc)} %</span> como número decimal y como fracción.`,
           campos: [{ id: "dec", etiqueta: "Decimal" }, { id: "fr", etiqueta: "Fracción (a/b)" }],
+          pasos: ["porcentajes.html", "formas", { n, d, desde: "porcentaje" }],
           _ok: { dec: fmt(dec), fr: `${n}/${d}` },
           comprobar(v) {
             const mal = [];

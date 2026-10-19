@@ -18,6 +18,10 @@
   .linea.final { font-size: 1.9rem; }
   body.proyectando .linea { font-size: 2.4rem; }
   body.proyectando .linea.final { font-size: 2.8rem; }
+  .entrada input[type="number"] { width: 5.5rem; }
+  .fuera { color: var(--acento); font-weight: 700; }
+  .bien { color: #1e7d43; font-weight: 700; }
+  .mal { color: var(--rojo); font-weight: 700; }
   @media (max-width: 640px) { .linea { font-size: 1.15rem; } .linea.final { font-size: 1.35rem; } }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
@@ -29,9 +33,29 @@
   <a href="../">← Volver al repaso</a>
 </header>
 
+<nav class="modos" role="tablist" aria-label="Qué hacer">
+  <button type="button" role="tab" data-modo="resolver">Resolver una expresión</button>
+  <button type="button" role="tab" data-modo="inversa">Comprobar con la operación inversa</button>
+  <button type="button" role="tab" data-modo="factorComun">Sacar factor común</button>
+</nav>
+
 <form class="entrada" id="entrada" autocomplete="off">
-  <label for="ex">Expresión:</label>
-  <input id="ex" type="text" spellcheck="false" aria-describedby="como">
+  <span data-para="resolver">
+    <label for="ex">Expresión:</label>
+    <input id="ex" type="text" spellcheck="false" aria-describedby="como">
+  </span>
+  <span data-para="inversa">
+    <select id="io" aria-label="Operación"><option value="resta">a − b = c</option><option value="division">a : b = c</option><option value="raiz">√a = c</option></select>
+    a <input id="ia" type="number" min="0" max="999999" aria-label="a">
+    b <input id="ib" type="number" min="0" max="999999" aria-label="b (no se usa en la raíz)">
+    c <input id="ic" type="number" min="0" max="999999" aria-label="c, el resultado que hay que comprobar">
+  </span>
+  <span data-para="factorComun">
+    a · b ± a · c con a = <input id="fa" type="number" min="1" max="9999" aria-label="a, el factor común">,
+    b = <input id="fb" type="number" min="1" max="9999" aria-label="b">
+    <select id="fo" aria-label="Operación"><option value="+">+</option><option value="−">−</option></select>
+    c = <input id="fc" type="number" min="1" max="9999" aria-label="c">
+  </span>
   <button type="submit" class="principal">Empezar</button>
   <div class="ejemplos" id="ejemplos"></div>
 </form>
@@ -101,10 +125,67 @@ function dibujar(r) {
   return textos;
 }
 
-const elegirModo = Pasos.montar({
-  resolver: { campos: { expresion: "ex" }, calcular: Jerarquia.calcular.resolver, dibujar,
-              ejemplos: Jerarquia.EJEMPLOS.resolver, azar: () => Jerarquia.azar() },
-}, "resolver");
+// Escena de líneas (como la de resolver): cada una aparece en su paso.
+function lineas(ls) {
+  const escena = document.getElementById("escena");
+  escena.className = "escena";
+  escena.innerHTML = `<div class="lineas">${ls.map(([html, k, extra = ""]) => `<div class="linea ${extra} ver${k}">${html}</div>`).join("")}</div>`;
+}
+const igual = '<span class="igual">=</span>';
+
+// --------------------------------------------- comprobar con la operación inversa
+function dibujarInversa(r) {
+  const { operacion, a, b, c, real, valor, debe } = r, bien = valor === debe;
+  const dicho = operacion === "raiz" ? `√${a} = ${c}` : `${a} ${r.op} ${b} = ${c}`;
+  const deshacer = operacion === "raiz" ? `${c}<sup>2</sup>` : `${c} ${r.inv} ${b}`;
+  const nombre = { resta: "una resta", division: "una división", raiz: "una raíz cuadrada" }[operacion];
+  const regla = { resta: "La resta se deshace con una <b>suma</b>: si a − b = c, entonces c + b tiene que dar a.",
+                  division: "La división se deshace con una <b>multiplicación</b>: si a : b = c, entonces c · b tiene que dar a.",
+                  raiz: "La raíz cuadrada se deshace <b>elevando al cuadrado</b>: si √a = c, entonces c<sup>2</sup> tiene que dar a." }[operacion];
+  lineas([
+    [`¿${dicho}?`, 0, "final"],
+    [deshacer, 1],
+    [`${deshacer} ${igual} <span class="resultado">${valor}</span>`, 2],
+    [bien ? `<span class="bien">${valor} = ${debe} ✓</span>` : `<span class="mal">${valor} ≠ ${debe} ✗</span>`, 3, "final"],
+  ]);
+  return [
+    ["Lo que hay que comprobar", `<p>Alguien ha calculado ${nombre}: <b>${dicho}</b>. Para saber si es correcto, sin repetir la misma cuenta, se usa la operación inversa.</p>`],
+    ["La operación inversa", `<p>${regla}</p>`],
+    ["La cuenta", `<p>${deshacer} = <b>${valor}</b>.</p>`],
+    ["¿Coincide?", bien ? `<p>Sale ${debe}, el número del principio: la operación <b>es correcta</b>.</p>`
+                        : `<p>Tendría que salir ${debe} y sale ${valor}: la operación <b>está mal</b>. Lo correcto es ${operacion === "raiz" ? `√${a} = ${real}` : `${a} ${r.op} ${b} = ${real}`}.</p>`],
+  ];
+}
+
+// ------------------------------------------------------- sacar factor común
+function dibujarFactor(r) {
+  const { a, b, c, op, s, resultado } = r, f = `<span class="fuera">${a}</span>`;
+  const mental = s === 10 || s === 100 || s === 1000 ? `Multiplicar por ${s} es añadir ${String(s).length - 1 === 1 ? "un cero" : `${String(s).length - 1} ceros`}.`
+    : s === 1 ? "Multiplicar por 1 deja el número igual." : "";
+  lineas([
+    [`${a} · ${b} ${op} ${a} · ${c}`, 0],
+    [`<span class="marcada">${a}</span> · ${b} ${op} <span class="marcada">${a}</span> · ${c}`, 1],
+    [`${igual}${f} · (${b} ${op} ${c})`, 2],
+    [`${igual}${f} · ${s}`, 3],
+    [`${igual}<span class="resultado">${Pasos.num(resultado)}</span>`, 4, "final"],
+  ]);
+  return [
+    ["La expresión", `<p>${a} · ${b} ${op} ${a} · ${c}: hacer las dos multiplicaciones es largo. Hay un camino más corto.</p>`],
+    ["El factor que se repite", `<p>El <b>${a}</b> está en los dos productos: es el <b>factor común</b>.</p>`],
+    ["Lo sacamos fuera", `<p>Se escribe una sola vez, fuera del paréntesis, y dentro quedan los otros dos números: ${a} · (${b} ${op} ${c}). Es la propiedad distributiva al revés.</p>`],
+    ["El paréntesis", `<p>${b} ${op} ${c} = <b>${s}</b>: una cuenta fácil.</p>`],
+    ["La multiplicación", `<p>${a} · ${s} = <b>${Pasos.num(resultado)}</b>. ${mental}</p>`],
+  ];
+}
+
+const MODOS = {
+  resolver: { campos: { expresion: "ex" }, dibujar },
+  inversa: { campos: { operacion: "io", a: "ia", b: "ib", c: "ic" }, dibujar: dibujarInversa },
+  factorComun: { campos: { a: "fa", b: "fb", op: "fo", c: "fc" }, dibujar: dibujarFactor },
+};
+for (const [m, def] of Object.entries(MODOS))
+  Object.assign(def, { calcular: Jerarquia.calcular[m], ejemplos: Jerarquia.EJEMPLOS[m], azar: () => Jerarquia.azar(m) });
+const elegirModo = Pasos.montar(MODOS, "resolver");
 </script>
 </body>
 </html>

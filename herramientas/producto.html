@@ -12,6 +12,13 @@
   .fino { stroke: var(--tinta); stroke-width: 0.8; stroke-dasharray: 3 3; }
   .numero-grupo { font-size: 16px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
   .unidad { font-size: 15px; text-anchor: middle; fill: var(--suave); }
+  .recta .eje { stroke: var(--tinta); stroke-width: 2.5; }
+  .recta .muesca { stroke: var(--tinta); stroke-width: 2; }
+  .recta .etq { font-size: 20px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  .recta .etq.res { fill: var(--acento); }
+  .recta .flecha { fill: none; stroke: var(--acento); stroke-width: 3; }
+  .recta .punta { fill: var(--acento); }
+  .recta .nota { font-size: 18px; text-anchor: middle; fill: var(--acento); font-weight: 700; }
   .rotulo-lado { font-size: 20px; text-anchor: start; fill: var(--tinta); font-weight: 700; }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
@@ -26,6 +33,7 @@
 <nav class="modos" role="tablist" aria-label="Operación">
   <button type="button" role="tab" data-modo="deUna">Multiplicar: fracción de una fracción</button>
   <button type="button" role="tab" data-modo="caben">Dividir: ¿cuántas veces cabe?</button>
+  <button type="button" role="tab" data-modo="efecto">¿Mayor o menor?</button>
 </nav>
 
 <form class="entrada" id="entrada" autocomplete="off">
@@ -38,6 +46,11 @@
     <span class="frac-input"><input id="da" class="corto" type="number" min="1" max="96" aria-label="Numerador del dividendo"><hr><input id="db" class="corto" type="number" min="1" max="12" aria-label="Denominador del dividendo (1 si es un número entero)"></span>
     :
     <span class="frac-input"><input id="dc" class="corto" type="number" min="1" max="12" aria-label="Numerador del divisor"><hr><input id="dd" class="corto" type="number" min="1" max="12" aria-label="Denominador del divisor"></span>
+  </span>
+  <span data-para="efecto">
+    <input id="en" type="number" min="1" max="99999" aria-label="Número">
+    <select id="eo" aria-label="Operación"><option value="·">·</option><option value=":">:</option></select>
+    <input id="ek" type="number" min="0" step="any" aria-label="Por o entre cuánto">
   </span>
   <button type="submit" class="principal">Empezar</button>
   <div class="ejemplos" id="ejemplos"></div>
@@ -62,7 +75,7 @@
 <script src="producto.js"></script>
 <script>
 "use strict";
-const { svg, frac, X0, ANCHO, llave, texto } = Pasos;
+const { svg, frac, num, X0, ANCHO, llave, texto } = Pasos;
 const f = ([n, d]) => d === 1 ? `${n}` : frac(n, d);
 
 // ------------------------------------------------- fracción de una fracción
@@ -124,9 +137,42 @@ function dibujarCaben(r) {
   ];
 }
 
+// ¿Mayor o menor? El número y el resultado en la recta; una flecha de uno a otro.
+function dibujarEfecto(r) {
+  const { N, op, k, r: res, mayor, eq } = r;
+  const g = Pasos.lienzo(200), recta = svg("g", { class: "recta" }, g), y = 120;
+  const max = Math.max(N, res) * 1.12, x = v => Pasos.X0 + v / max * Pasos.ANCHO;
+  svg("line", { x1: Pasos.X0, y1: y, x2: Pasos.X0 + Pasos.ANCHO, y2: y, class: "eje" }, recta);
+  const marca = (v, clase, t) => {
+    const m = svg("g", { class: clase }, recta);
+    svg("line", { x1: x(v), y1: y - 9, x2: x(v), y2: y + 9, class: "muesca" }, m);
+    Pasos.texto(m, { x: x(v), y: y + 36, t, clase: "etq" + (clase.includes("res") ? " res" : "") });
+  };
+  marca(0, "", "0");
+  marca(N, "", num(N));
+  // Flecha curva de N al resultado (paso 1) y el resultado (paso 2).
+  const fl = svg("g", { class: "ver1" }, recta), x1 = x(N), x2 = x(res), alto = Math.min(70, Math.abs(x2 - x1) / 2 + 20);
+  svg("path", { d: `M ${x1} ${y - 12} Q ${(x1 + x2) / 2} ${y - 12 - alto} ${x2} ${y - 12}`, class: "flecha" }, fl);
+  // Punta en la dirección con la que llega el arco (del punto de control al final).
+  const dx = x2 - (x1 + x2) / 2, dy = alto, l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, L = 14, A = 7;
+  const bx = x2 - ux * L, by = y - 12 - uy * L;
+  svg("path", { d: `M ${x2} ${y - 12} L ${bx - uy * A} ${by + ux * A} L ${bx + uy * A} ${by - ux * A} Z`, class: "punta" }, fl);
+  Pasos.texto(fl, { x: (x1 + x2) / 2, y: y - 22 - alto, t: `${op} ${num(k)}`, clase: "nota" });
+  marca(res, "ver2 res", num(res));
+  const que = op === "·" ? (k < 1 ? `multiplicar por ${num(k)} es quedarse con <b>una parte</b> del número` : `multiplicar por ${num(k)} es tomar el número <b>más de una vez</b>`)
+                         : (k < 1 ? `dividir entre ${num(k)} es ver <b>cuántas veces cabe</b> ${num(k)} en ${num(N)}: cabe muchas veces` : `dividir entre ${num(k)} es <b>repartir</b> en ${num(k)} partes iguales`);
+  return [
+    ["La operación", `<p>${num(N)} ${op} ${num(k)}: antes de calcular, ¿el resultado será mayor o menor que ${num(N)}?</p>`],
+    [`${num(k)} es ${k < 1 ? "menor" : "mayor"} que 1`, `<p>${que.charAt(0).toUpperCase() + que.slice(1)}. Por eso el resultado es <b>${mayor ? "mayor" : "menor"}</b> que ${num(N)}.</p>`],
+    ["El cálculo", `<p>${num(N)} ${op} ${num(k)}${eq ? ` = ${num(N)} ${eq}` : ""} = <b>${num(res)}</b>.</p>${eq ? `<p>${op === "·" ? "Multiplicar" : "Dividir"} ${op === "·" ? "por" : "entre"} ${num(k)} es lo mismo que ${eq.startsWith(":") ? "dividir entre" : "multiplicar por"} ${eq.slice(2)}.</p>` : ""}`],
+    ["La regla", `<p>Multiplicar por un número menor que 1 hace el resultado más pequeño; dividir entre él, más grande. Con un número mayor que 1, al revés.</p>`],
+  ];
+}
+
 const MODOS = {
   deUna: { campos: { a: "ma", b: "mb", c: "mc", d: "md" }, dibujar: dibujarDeUna },
   caben: { campos: { a: "da", b: "db", c: "dc", d: "dd" }, dibujar: dibujarCaben },
+  efecto: { campos: { N: "en", op: "eo", k: "ek" }, dibujar: dibujarEfecto },
 };
 for (const [m, def] of Object.entries(MODOS))
   Object.assign(def, { calcular: Producto.calcular[m], ejemplos: Producto.EJEMPLOS[m], azar: () => Producto.azar(m) });

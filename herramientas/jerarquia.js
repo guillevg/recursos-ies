@@ -3,7 +3,8 @@
 // (primero los paréntesis, después multiplicaciones y divisiones, después
 // sumas y restas, y de izquierda a derecha), con números exactos. También
 // calcula lo que saldría operando de izquierda a derecha sin respetar la
-// jerarquía, para comparar. Sin dibujo: lo muestra jerarquia.html.
+// jerarquía, para comparar. Además, comprobar una operación con la inversa y
+// sacar factor común. Sin dibujo: lo muestra jerarquia.html.
 "use strict";
 
 const Jerarquia = (() => {
@@ -184,7 +185,34 @@ const Jerarquia = (() => {
     } catch (e) { return null; }
   }
 
-  const calcular = { resolver: ({ expresion }) => resolver(expresion) };
+  // Comprobar con la operación inversa: alguien dice que a − b = c, a : b = c
+  // o √a = c; se deshace la operación con c y se compara con a.
+  function inversa({ operacion, a, b, c }) {
+    if (!(a >= 0 && c >= 0) || !Number.isInteger(a) || !Number.isInteger(c)) return { error: "Los números tienen que ser enteros y no negativos." };
+    if (operacion === "resta") {
+      if (!(b >= 0 && b <= a) || !Number.isInteger(b)) return { error: "Lo que se resta tiene que ser un entero entre 0 y el primer número." };
+      return { operacion, a, b, c, real: a - b, valor: c + b, debe: a, op: "−", inv: "+" };
+    }
+    if (operacion === "division") {
+      if (!(b > 0) || !Number.isInteger(b)) return { error: "El divisor tiene que ser un entero mayor que 0." };
+      if (a % b) return { error: "La división tiene que ser exacta." };
+      return { operacion, a, b, c, real: a / b, valor: c * b, debe: a, op: ":", inv: "·" };
+    }
+    const r = Math.round(Math.sqrt(a));
+    if (r * r !== a) return { error: "Para la raíz, el número tiene que ser un cuadrado perfecto (49, 144, 361…)." };
+    return { operacion: "raiz", a, b: null, c, real: r, valor: c * c, debe: a };
+  }
+
+  // Sacar factor común: a · b ± a · c = a · (b ± c).
+  function factorComun({ a, b, c, op }) {
+    if (![a, b, c].every(x => Number.isInteger(x) && x > 0)) return { error: "Los tres números tienen que ser enteros mayores que 0." };
+    if (op !== "+" && op !== "−") return { error: "La operación tiene que ser una suma o una resta." };
+    if (op === "−" && c > b) return { error: "En la resta, el segundo número del paréntesis no puede ser mayor que el primero." };
+    const s = op === "+" ? b + c : b - c;
+    return { a, b, c, op, s, resultado: a * s };
+  }
+
+  const calcular = { resolver: ({ expresion }) => resolver(expresion), inversa, factorComun };
 
   const EJEMPLOS = {
     resolver: [
@@ -195,10 +223,31 @@ const Jerarquia = (() => {
       { etiqueta: "El error de Nerea", expresion: "2/3 + 1/3 · 3/2", texto: "Nerea calcula 2/3 + 1/3 = 1 y después 1 · 3/2 = 3/2. ¿Es correcto?" },
       { etiqueta: "2,5 · (1,2 − 0,8) + 0,3 : 0,1", expresion: "2,5 · (1,2 - 0,8) + 0,3 : 0,1", texto: "Calcula con decimales, respetando la jerarquía." },
     ],
+    inversa: [
+      { etiqueta: "634 − 278 = 356", operacion: "resta", a: 634, b: 278, c: 356, texto: "Alguien ha calculado 634 − 278 = 356. Compruébalo con la operación inversa." },
+      { etiqueta: "312 : 13 = 23", operacion: "division", a: 312, b: 13, c: 23, texto: "Alguien ha calculado 312 : 13 = 23. ¿Es correcto?" },
+      { etiqueta: "√324 = 18", operacion: "raiz", a: 324, b: 0, c: 18, texto: "Alguien ha calculado √324 = 18. ¿Es correcto?" },
+    ],
+    factorComun: [
+      { etiqueta: "37 · 64 + 37 · 36", a: 37, b: 64, c: 36, op: "+", texto: "Calcula de cabeza sacando factor común." },
+      { etiqueta: "245 · 13 − 245 · 3", a: 245, b: 13, c: 3, op: "−", texto: "Calcula de cabeza sacando factor común." },
+      { etiqueta: "18 · 7 + 18 · 3", a: 18, b: 7, c: 3, op: "+", texto: "Calcula de cabeza sacando factor común." },
+    ],
   };
 
-  function azar(_, r = Math.random) {
+  function azar(modo = "resolver", r = Math.random) {
     const ent = (lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+    if (modo === "inversa") {
+      const operacion = ["resta", "division", "raiz"][ent(0, 2)], error = [0, 0, 1, -1, 10][ent(0, 4)];
+      if (operacion === "resta") { const a = ent(120, 999), b = ent(30, a - 20); return { operacion, a, b, c: a - b + error }; }
+      if (operacion === "division") { const b = ent(3, 19), q = ent(4, 40); return { operacion, a: b * q, b, c: q + error }; }
+      const q = ent(11, 25); return { operacion, a: q * q, b: 0, c: Math.max(1, q + Math.sign(error)) };
+    }
+    if (modo === "factorComun") {
+      const a = ent(11, 999);
+      if (r() < 0.5) { const t = [10, 100][ent(0, 1)], b = ent(2, t - 2); return { a, b, c: t - b, op: "+" }; }
+      const c = ent(2, 12); return { a, b: c + [1, 10, 100][ent(0, 2)], c, op: "−" };
+    }
     const n = () => { const v = ent(-9, 12); return v < 0 ? `(−${-v})` : String(v || 2); };
     const plantillas = [
       () => `${n()} + ${n()} · ${n()}`,
