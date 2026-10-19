@@ -119,7 +119,9 @@ const fracAzar = (maxD = 6) => { const d = azar(2, maxD); return Q(irreducible(0
 const sg = n => n < 0 ? `−${-n}` : `${n}`;            // entero suelto
 const ent = n => n < 0 ? `(−${-n})` : `${n}`;         // entero dentro de una expresión
 const NUM = (id, clase = "") => `<input class="casilla num ${clase}" id="f-${id}" inputmode="numeric" autocomplete="off" aria-label="Respuesta">`;
-const SELECT = (id, opciones) => `<select class="casilla" id="f-${id}"><option value="">Elige…</option>${opciones.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>`;
+// Elegir una opción entre pocas: botones de opción (radio) con aspecto de botón.
+const ELEGIR = (id, opciones, etiqueta) => `<span class="elegir" role="radiogroup" id="f-${id}" data-elegir aria-label="${etiqueta}">${opciones.map(([v, t]) =>
+  `<label><input type="radio" name="f-${id}" value="${v}"><span>${t}</span></label>`).join("")}</span>`;
 const pot = (b, e) => `${b}<sup>${e}</sup>`;
 // Nota de simplificación de una respuesta en forma de fracción ya comprobada como correcta.
 // Texto plano de un trozo de HTML de los ejercicios (fracciones como a/b), para

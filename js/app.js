@@ -79,7 +79,10 @@ function actividad(c, t, def, claveAct) {
   }
   // La meta: META segmentos que se pintan de dorado con cada acierto seguido.
   const meta = () => { const p = progreso.get(k); $("#meta").setAttribute("aria-label", p >= META ? "Superada" : `${p} de ${META} seguidos`); $("#meta").innerHTML = Array.from({ length: META }, (_, i) => `<i class="${i < p ? "on" : ""}"></i>`).join(""); };
-  const entradas = () => [...document.querySelectorAll("#trabajo input, #trabajo select")];
+  // Casillas y grupos de botones de opción (data-elegir), cada uno con su valor.
+  const entradas = () => [...document.querySelectorAll("#trabajo input:not([type=radio]), #trabajo [data-elegir]")];
+  const grupo = el => el.dataset && "elegir" in el.dataset;
+  const valor = el => grupo(el) ? el.querySelector("input:checked")?.value ?? "" : el.value;
   const ayuda = (id, nombre, ic, extra = "") => `<button type="button" id="${id}" aria-label="${nombre}" title="${nombre}"${extra}>${icono(ic)}</button>`;
 
   function pintar() {
@@ -125,15 +128,16 @@ function actividad(c, t, def, claveAct) {
       $("#pista a")?.addEventListener("click", ev => { ev.preventDefault(); ventana(ev.currentTarget.href, A.herramienta[0]); });
     });
     $("#b-otro").addEventListener("click", () => { if (!resuelto) progreso.set(k, 0); ej = A.nuevo(variante); pintar(); });
-    entradas()[0].focus({ preventScroll: true });
+    const primera = entradas()[0];
+    (grupo(primera) ? primera.querySelector("input") : primera).focus({ preventScroll: true });
   }
 
   function comprobar(e) {
     e.preventDefault();
     if (resuelto) { ej = A.nuevo(variante); pintar(); return; }
     const v = {};
-    entradas().forEach(i => { v[i.id.slice(2)] = i.value; i.classList.remove("mal", "bien"); });
-    if (Object.values(v).some(x => x.trim() === "")) { $("#salida").innerHTML = `<div class="aviso mal"><p>Rellena todas las casillas.</p></div>`; return; }
+    entradas().forEach(i => { v[i.id.slice(2)] = valor(i); i.classList.remove("mal", "bien"); });
+    if (Object.values(v).some(x => x.trim() === "")) { $("#salida").innerHTML = `<div class="aviso mal"><p>Contesta todo antes de comprobar.</p></div>`; return; }
     const r = ej.comprobar(v);
     entradas().forEach(i => i.classList.add((r.campos || []).includes(i.id.slice(2)) ? "mal" : "bien"));
     if (!r.bien) fallos++;

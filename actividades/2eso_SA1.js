@@ -297,7 +297,7 @@ Repaso.tema("2eso", "SA1", {
         return {
           html: `Alguien ha calculado <span class="dato">${enun}</span>. Compruébalo con la operación inversa: ¿es correcto?`,
           trabajo: `<div class="linea-op"><span>${inv}</span><span class="op">=</span>${NUM("v", "ancho")}</div>
-                    <div class="campos centrado"><div class="campo"><label for="f-ok">¿Es correcto?</label>${SELECT("ok", [["si", "Sí, es correcto"], ["no", "No, está mal"]])}</div></div>`,
+                    <div class="campos centrado"><div class="campo"><span class="etiqueta">¿Es correcto?</span>${ELEGIR("ok", [["si", "Sí, es correcto"], ["no", "No, está mal"]], "¿Es correcto?")}</div></div>`,
           pasos: ["jerarquia.html", "inversa", { operacion: tipo, a, b, c }],
           _ok: { v: String(valor), ok: correcta ? "si" : "no" },
           comprobar(v) {
@@ -436,7 +436,7 @@ Repaso.tema("2eso", "SA1", {
         const regla = `${op === "·" ? "Multiplicas por" : "Divides entre"} ${fmt(k)}, que es ${k < 1 ? "menor" : "mayor"} que 1: el resultado es ${mayor ? "mayor" : "menor"} que ${N}.`;
         return {
           html: "Primero decide sin calcular si el resultado será mayor o menor. Después calcúlalo.",
-          trabajo: `<div class="linea-op"><span>${N} ${op} ${fmt(k)}</span><span class="op">es</span>${SELECT("mm", [["mayor", "mayor"], ["menor", "menor"]])}<span class="op">que ${N}</span></div>
+          trabajo: `<div class="linea-op"><span>${N} ${op} ${fmt(k)}</span><span class="op">es</span>${ELEGIR("mm", [["mayor", "mayor"], ["menor", "menor"]], "¿Mayor o menor?")}<span class="op">que ${N}</span></div>
                     <div class="linea-op"><span>${N} ${op} ${fmt(k)}</span><span class="op">=</span>${NUM("r", "ancho")}</div>`,
           pasos: ["producto.html", "efecto", { N, op, k }],
           _ok: { mm: mayor ? "mayor" : "menor", r: fmt(r) },
