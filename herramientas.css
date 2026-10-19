@@ -1,0 +1,50 @@
+/* Las herramientas paso a paso (de web/) dentro de la web del alumnado: mismo
+   aspecto que el repaso (diseño «Camino»). publicar_alumnado.py la enlaza al
+   final del <head> de cada herramienta, así que pisa sus estilos sin tocarlos.
+   Dentro de la ventana del repaso (html.en-modal) sobra la cabecera; si además
+   llegan los datos del ejercicio (html.con-datos), también el cuadro de datos. */
+:root {
+  --tinta: #1f2340;
+  --suave: #5b5f7a;
+  --borde: #dfe0ec;
+  --fondo: #f6f7fb;
+  --fondo-alt: #ffffff;
+  --acento: #4a43b8;
+  --acento-oscuro: #332d8a;
+  --acento-suave: #e9e8fa;
+}
+body { font-family: "Figtree", system-ui, sans-serif; font-size: 18px; line-height: 1.55; }
+:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+h1 { color: var(--tinta); font-weight: 800; }
+header a { color: var(--suave); font-weight: 600; text-decoration: none; }
+header a:hover { color: var(--acento); }
+
+button { border: 2px solid var(--borde); border-radius: 12px; padding: .4rem .9rem; min-height: 44px; font-weight: 600; color: var(--tinta); }
+button:hover:not(:disabled) { border-color: var(--acento); }
+button.principal { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 800; box-shadow: 0 4px 0 var(--acento-oscuro); }
+button.principal:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--acento-oscuro); }
+.modos button { border-radius: 999px; }
+.modos button[aria-selected="true"] { background: var(--acento); border-color: var(--acento); color: #fff; }
+
+.entrada { background: var(--fondo-alt); border: 0; border-radius: 16px; padding: 1rem 1.2rem; }
+.entrada input, .entrada select, .frac-input input { border: 2px solid var(--borde); border-radius: 10px; font-weight: 600; }
+
+.enunciado { font-size: 1.25rem; }
+.explicacion { background: var(--fondo-alt); border-left: 0; border-radius: 16px; padding: 1rem 1.3rem; }
+.explicacion h2 { color: var(--acento); font-weight: 800; }
+.puntos i { width: 12px; height: 12px; }
+.puntos i.hecho { background: var(--acento); }
+.ayuda { color: var(--suave); }
+
+/* Dentro de la ventana del repaso */
+html.en-modal body { padding-top: .8rem; max-width: none; }
+html.en-modal header, html.en-modal .proyectar { display: none; }
+html.en-modal.con-datos .modos, html.en-modal.con-datos .entrada, html.en-modal.con-datos .ayuda { display: none; }
+html.en-modal.con-datos .enunciado { margin-top: .4rem; }
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .controles { gap: .5rem; }
+  .controles button { padding: .4rem .7rem; }
+}
+@media (prefers-reduced-motion: reduce) { button.principal:active:not(:disabled) { transform: none; } }

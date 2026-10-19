@@ -154,7 +154,18 @@ select.casilla { font: inherit; font-size: 1rem; padding: .4rem .5rem; border: 2
 .operaciones h3 { font-size: .9rem; font-weight: 600; color: var(--muted); margin: 0 0 .3rem; }
 .operaciones p { margin: .45rem 0; font-size: 1.08rem; font-variant-numeric: tabular-nums; }
 
+/* Ventana de la herramienta paso a paso */
+.ventana { width: min(1100px, calc(100vw - 32px)); height: min(820px, calc(100vh - 32px)); height: min(820px, calc(100dvh - 32px)); max-width: none; max-height: none; padding: 0; border: 0; border-radius: 20px; background: var(--bg); color: var(--fg); box-shadow: 0 20px 60px rgba(31, 35, 64, .35); }
+.ventana[open] { display: flex; flex-direction: column; }
+.ventana::backdrop { background: rgba(31, 35, 64, .55); }
+.ventana-barra { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem .8rem .7rem 1.3rem; background: var(--surface); border-bottom: 1px solid var(--line); }
+.ventana-barra h2 { margin: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.25; }
+#ventana-cerrar { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; cursor: pointer; }
+#ventana-cerrar:hover { background: #dcdaf7; }
+#ventana-marco { flex: 1; width: 100%; border: 0; background: var(--bg); }
+
 @media (max-width: 520px) {
+  .ventana { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; }
   body { font-size: 17px; }
   h1 { font-size: 1.6rem; }
   .enunciado { font-size: 1.25rem; }

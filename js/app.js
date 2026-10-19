@@ -120,6 +120,7 @@ function actividad(c, t, def, claveAct) {
       }
       $("#b-pista").setAttribute("aria-pressed", "true");
       $("#salida").insertAdjacentHTML("afterbegin", `<div class="aviso pista" id="pista"><p>${A.pista}</p><p><a href="${href}" target="_blank" rel="noopener">${texto}</a></p></div>`);
+      $("#pista a").addEventListener("click", ev => { ev.preventDefault(); ventana(href, nombre); });
     });
     $("#b-otro").addEventListener("click", () => { if (!resuelto) progreso.set(k, 0); ej = A.nuevo(variante); pintar(); });
     entradas()[0].focus({ preventScroll: true });
@@ -150,6 +151,24 @@ function actividad(c, t, def, claveAct) {
 
   pintar();
 }
+
+// La herramienta paso a paso, en una ventana sobre el ejercicio (se cierra con
+// la ✕, con Esc o pulsando fuera) para no perder el sitio en la tanda.
+function ventana(href, titulo) {
+  const v = $("#ventana");
+  if (!v.showModal) { window.open(href, "_blank", "noopener"); return; }
+  $("#ventana-titulo").textContent = titulo;
+  $("#ventana-marco").title = titulo;
+  $("#ventana-marco").src = href;
+  v.showModal();
+  $("#ventana-cerrar").focus();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const v = $("#ventana");
+  $("#ventana-cerrar").addEventListener("click", () => v.close());
+  v.addEventListener("click", ev => { if (ev.target === v) v.close(); });   // fuera de la ventana
+  v.addEventListener("close", () => { $("#ventana-marco").src = "about:blank"; });
+});
 
 // #curso/tema/actividad → la vista que toca. Sin curso, el último elegido.
 function mostrar() {
