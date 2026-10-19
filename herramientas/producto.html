@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="pasos.css">
 <style>
   .fino { stroke: var(--tinta); stroke-width: 0.8; stroke-dasharray: 3 3; }
+  .grupo-contorno { fill: none; stroke: var(--naranja); stroke-width: 4; stroke-dasharray: 9 5; }
   .numero-grupo { font-size: 16px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
   .unidad { font-size: 15px; text-anchor: middle; fill: var(--suave); }
   .recta .eje { stroke: var(--tinta); stroke-width: 2.5; }
@@ -118,6 +119,8 @@ function dibujarCaben(r) {
     else if (q % 2 === 0) svg("rect", { x: X0 + desde * p, y, width: C * p, height: h, class: "parte naranja " + (q === 0 ? "ver2" : "ver3") }, g);
     if (!resto) texto(g, { x: X0 + (desde + C / 2) * p, y: y - 10, t: q + 1, clase: "numero-grupo " + (q === 0 ? "ver2" : "ver3") });
   }
+  // Si no cabe ni un grupo entero, el grupo se ve como un contorno naranja más largo que lo azul.
+  if (enteras === 0) svg("rect", { x: X0, y: y - 4, width: Math.min(C, total) * p, height: h + 8, rx: 4, class: "grupo-contorno ver2" }, g);
   for (let k = 1; k < total; k++) if (k % m) svg("line", { x1: X0 + k * p, y1: y, x2: X0 + k * p, y2: y + h, class: "fino ver1" }, g);
   for (let u = 1; u < unidades; u++) svg("line", { x1: X0 + u * uw, y1: y, x2: X0 + u * uw, y2: y + h, class: "corte" }, g);
   svg("rect", { x: X0, y, width: ANCHO, height: h, class: "contorno" }, g);
@@ -125,15 +128,25 @@ function dibujarCaben(r) {
   llave(g, { x1: X0, x2: X0 + A * p, y: y - 20, h, arriba: true, texto: `${b === 1 ? a : a + "/" + b}` });
   llave(g, { x1: X0, x2: X0 + C * p, y: y + 32, h, arriba: false, texto: `${c}/${d}`, clase: "ver2" });
   const div = b === 1 ? `${a}` : frac(a, b);
-  const resultado = sobra === 0 ? `<b>${enteras}</b>` : `${enteras} y ${frac(sobraFrac[0], sobraFrac[1])} = <b>${f(cociente)}</b>`;
+  // Sin grupos enteros, el resultado es solo la parte de grupo (nada de «0 y …»);
+  // con grupos y sobra, enteros + parte, que se lee como una suma.
+  const parteGrupo = frac(sobraFrac[0], sobraFrac[1]);
+  const resultado = sobra === 0 ? `<b>${enteras}</b>` : enteras === 0 ? `<b>${f(cociente)}</b>` : `${enteras} + ${parteGrupo} = <b>${f(cociente)}</b>`;
+  const cuantos = enteras === 0
+    ? `<p>No cabe ni un grupo entero: los ${A} ${A === 1 ? "trozo azul" : "trozos azules"} (en gris) son ${A} de los ${C} trozos de un grupo, es decir, ${parteGrupo} de grupo.</p>`
+    : `<p>Vamos poniendo grupos de ${C} trozos: caben <b>${enteras}</b> ${enteras === 1 ? "grupo" : "grupos"}${sobra ? ` y sobran ${sobra} ${sobra === 1 ? "trozo" : "trozos"} (en gris), que son ${parteGrupo} de grupo` : ""}.</p>`;
+  const tamano = c < d ? `<p>Dividir entre una fracción menor que 1 da un resultado <b>más grande</b> que el dividendo: caben muchos trozos pequeños.</p>`
+    : c > d ? `<p>Dividir entre una fracción mayor que 1 da un resultado <b>más pequeño</b> que el dividendo.</p>` : "";
   return [
-    ["Lo que vamos a repartir", `<p>Dividir ${div} : ${frac(c, d)} es preguntarse: <b>¿cuántas veces cabe ${frac(c, d)} en ${div}?</b></p><p>En azul, ${div} ${unidades === 1 && b > 1 ? "de una unidad" : "unidades"}.</p>`],
+    ["Lo que vamos a repartir", `<p>Dividir ${div} : ${frac(c, d)} es preguntarse: <b>¿cuántas veces cabe ${frac(c, d)} en ${div}?</b></p><p>En azul, ${div} ${a <= b && b > 1 ? "de una unidad" : "unidades"}.</p>`],
     ["Trozos del mismo tamaño", `<p>Cortamos cada unidad en <b>${m}</b> trozos iguales${m !== d ? ` (${m} es el m.c.m. de ${b} y ${d})` : ""}: así, ${div} son ${A} trozos y ${frac(c, d)} son ${C}.</p>`],
-    ["Un grupo", `<p>Un grupo de ${frac(c, d)} ocupa ${C} ${C === 1 ? "trozo" : "trozos"} (en naranja, con la llave).</p>`],
-    ["¿Cuántos grupos caben?", `<p>Vamos poniendo grupos de ${C} trozos: caben <b>${enteras}</b> ${enteras === 1 ? "grupo" : "grupos"}${sobra ? ` y sobran ${sobra} ${sobra === 1 ? "trozo" : "trozos"} (en gris), que son ${frac(sobraFrac[0], sobraFrac[1])} de grupo` : ""}.</p>`],
+    ["Un grupo", enteras === 0
+      ? `<p>Un grupo de ${frac(c, d)} ocupa ${C} trozos (el contorno naranja, con la llave): es más largo que lo azul, que son ${A}.</p>`
+      : `<p>Un grupo de ${frac(c, d)} ocupa ${C} ${C === 1 ? "trozo" : "trozos"} (en naranja, con la llave).</p>`],
+    ["¿Cuántos grupos caben?", cuantos],
     ["Resultado", `<p>${div} : ${frac(c, d)} = ${resultado}.</p>
       <p>Es lo mismo que multiplicar por la fracción dada la vuelta: ${div} · ${frac(d, c)} = ${f(cociente)}.</p>
-      <p>Dividir entre una fracción menor que 1 da un resultado <b>más grande</b> que el dividendo: caben muchos trozos pequeños.</p>`],
+      ${tamano}`],
   ];
 }
 

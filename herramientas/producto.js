@@ -24,7 +24,8 @@ const Producto = (() => {
     if (!(b >= 1 && d >= 1 && b <= 12 && d <= 12)) return { error: "Los denominadores tienen que estar entre 1 y 12." };
     if (!(a >= 1 && c >= 1)) return { error: "Los numeradores tienen que ser mayores que 0." };
     const m = b * d / mcd(b, d), A = a * m / b, C = c * m / d;
-    const unidades = Math.ceil(a / b);
+    // Las unidades que hay que dibujar: hasta el dividendo o, si es más corto, hasta el divisor.
+    const unidades = Math.max(Math.ceil(a / b), Math.ceil(c / d));
     if (unidades > 8) return { error: "El dividendo es demasiado grande para dibujarlo (como mucho, 8 unidades)." };
     if (unidades * m > 72) return { error: "Salen demasiados trozos para dibujarlos: prueba con denominadores más pequeños." };
     const enteras = Math.floor(A / C), sobra = A - enteras * C;
