@@ -20,6 +20,8 @@ const progreso = (() => {
 
 const clave = (c, t, a) => `${c}/${t}/${a}`;
 const nombreCorto = c => c.nombre.split(" · ")[0];
+const nombreTema = t => `${t.id}. ${t.titulo}`;   // «SA1. Números para entender el mundo»
+const numeroTema = t => t.id.replace(/^SA_?/, "");
 
 // Iconos de trazo (24×24), con el color del texto.
 const TRAZOS = {
@@ -43,19 +45,19 @@ function inicio(c) {
   document.title = `Repaso de ${nombreCorto(c)}`;
   vista().innerHTML = `
     <h1 class="vh">Temas</h1>
-    <ol class="camino">${c.temas.map((t, i) => {
+    <ol class="camino">${c.temas.map(t => {
       const def = Repaso.temas[`${c.id}/${t.id}`];
-      if (!def) return `<li class="parada apagada"><span class="anillo"><span>${i + 1}</span></span><span class="nombre">${t.titulo}</span></li>`;
+      if (!def) return `<li class="parada apagada"><span class="anillo"><span>${numeroTema(t)}</span></span><span class="nombre">${nombreTema(t)}</span></li>`;
       const acts = Object.values(def.bloques).flat(), hechas = acts.filter(a => progreso.get(clave(c.id, t.id, a)) >= META).length;
-      return `<li><a class="parada" href="#${c.id}/${t.id}">${anillo(Math.round(100 * hechas / acts.length), i + 1, `${hechas} de ${acts.length} superadas`)}<span class="nombre">${t.titulo}</span></a></li>`;
+      return `<li><a class="parada" href="#${c.id}/${t.id}">${anillo(Math.round(100 * hechas / acts.length), numeroTema(t), `${hechas} de ${acts.length} superadas`)}<span class="nombre">${nombreTema(t)}</span></a></li>`;
     }).join("")}</ol>`;
 }
 
 function tema(c, t, def) {
-  document.title = t.titulo;
+  document.title = nombreTema(t);
   vista().innerHTML = `
     ${volver("Temas", `#${c.id}`)}
-    <h1>${t.titulo}</h1>
+    <h1>${nombreTema(t)}</h1>
     <ol class="camino">${t.bloques.map(b => {
       const acts = def.bloques[b.letra] || [];
       return `<li class="hito${acts.length ? "" : " apagado"}"><span class="letra"><span>${b.letra}</span></span>${b.titulo}</li>` + acts.map(a => {
@@ -84,7 +86,7 @@ function actividad(c, t, def, claveAct) {
     resuelto = false; fallos = 0;
     const oculto = !!ej.dibujo && (ej.dibujoOculto ?? A.dibujoOculto);
     vista().innerHTML = `
-      ${volver(t.titulo, `#${c.id}/${t.id}`)}
+      ${volver(nombreTema(t), `#${c.id}/${t.id}`)}
       <form id="form" novalidate>
         <div class="meta" id="meta" role="img"></div>
         <h1 class="titulo-ej">${A.titulo}</h1>
