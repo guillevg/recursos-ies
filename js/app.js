@@ -29,6 +29,8 @@ const TRAZOS = {
   hecho: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   pista: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
   dibujo: '<rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M9 7v10M15 7v10"/>',
+  sonido: '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+  mudo: '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/>',
   otro: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
 };
 const icono = n => `<svg class="icono" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TRAZOS[n]}</svg>`;
@@ -77,8 +79,14 @@ function actividad(c, t, def, claveAct) {
     if (x.potencia) return `<div class="campo"><label for="f-${x.id}">${x.etiqueta}</label><div class="potencia"><input class="casilla" id="f-${x.id}" inputmode="decimal" autocomplete="off"><span class="x">· 10</span><input class="casilla exp" id="f-${x.potencia}" inputmode="numeric" autocomplete="off" aria-label="Exponente"></div></div>`;
     return `<div class="campo"><label for="f-${x.id}">${x.etiqueta}</label><input class="casilla" id="f-${x.id}" inputmode="decimal" autocomplete="off"></div>`;
   }
-  // La meta: META segmentos que se pintan de dorado con cada acierto seguido.
-  const meta = () => { const p = progreso.get(k); $("#meta").setAttribute("aria-label", p >= META ? "Superada" : `${p} de ${META} seguidos`); $("#meta").innerHTML = Array.from({ length: META }, (_, i) => `<i class="${i < p ? "on" : ""}"></i>`).join(""); };
+  // La meta: META segmentos que se pintan de dorado con cada acierto seguido;
+  // el recién ganado (nuevo) da un salto y, si es el último, salta toda la barra.
+  const meta = (nuevo = -1) => {
+    const p = progreso.get(k), m = $("#meta");
+    m.setAttribute("aria-label", p >= META ? "Superada" : `${p} de ${META} seguidos`);
+    m.innerHTML = Array.from({ length: META }, (_, i) => `<i style="--i:${i}" class="${i < p ? "on" : ""}${i === nuevo ? " nuevo" : ""}"></i>`).join("");
+    m.classList.toggle("completa", nuevo === META - 1);
+  };
   // Casillas y grupos de botones de opción (data-elegir), cada uno con su valor.
   const entradas = () => [...document.querySelectorAll("#trabajo input:not([type=radio]), #trabajo [data-elegir]")];
   const grupo = el => el.dataset && "elegir" in el.dataset;
@@ -141,7 +149,8 @@ function actividad(c, t, def, claveAct) {
     const r = ej.comprobar(v);
     entradas().forEach(i => i.classList.add((r.campos || []).includes(i.id.slice(2)) ? "mal" : "bien"));
     if (!r.bien) fallos++;
-    if (r.bien) progreso.set(k, progreso.get(k) + 1);
+    const antes = progreso.get(k);
+    if (r.bien) progreso.set(k, antes + 1);
     else if (fallos >= 2) progreso.set(k, 0);
     resuelto = r.bien || fallos >= 2;   // con dos fallos seguidos se enseña la solución
     let html = `<div class="aviso ${r.bien ? "bien" : "mal"}"><p><strong>${r.texto}</strong></p>${r.explica ? `<p class="explica">${r.explica}</p>` : ""}</div>`;
@@ -152,7 +161,9 @@ function actividad(c, t, def, claveAct) {
       else if (!r.bien) html += `<div class="operaciones"><h3>Solución</h3><p>${ej.solucion}</p></div>`;
     }
     $("#salida").innerHTML = html;
-    meta();
+    meta(r.bien && antes < META ? antes : -1);
+    if (r.bien) antes + 1 === META ? Celebrar.meta() : Celebrar.acierto(Math.min(antes + 1, META));
+    else Celebrar.fallo();
   }
 
   pintar();
@@ -179,7 +190,15 @@ function ventanaCargada() {
     w.document.addEventListener("keydown", ev => { if (ev.key === "Escape") v.close(); });
   } catch (e) {}
 }
+// Botón de la cabecera para silenciar los sonidos de acierto.
+function botonSonido() {
+  const b = $("#sonido");
+  b.innerHTML = icono(Celebrar.sonido ? "sonido" : "mudo");
+  b.setAttribute("aria-pressed", String(Celebrar.sonido));
+}
 document.addEventListener("DOMContentLoaded", () => {
+  botonSonido();
+  $("#sonido").addEventListener("click", () => { Celebrar.alternar(); botonSonido(); });
   const v = $("#ventana");
   $("#ventana-cerrar").addEventListener("click", () => v.close());
   v.addEventListener("click", ev => { if (ev.target === v) v.close(); });   // fuera de la ventana

@@ -33,7 +33,7 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--fo
 
 header.barra .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-block: 1.3rem 2.4rem; }
 .marca { font-weight: 800; font-size: 1.1rem; color: var(--accent); text-decoration: none; }
-.cursos { display: flex; border: 2px solid var(--accent); border-radius: 12px; overflow: hidden; }
+.cursos { margin-left: auto; display: flex; border: 2px solid var(--accent); border-radius: 12px; overflow: hidden; }
 .cursos a { font-size: .92rem; font-weight: 600; text-decoration: none; background: var(--surface); color: var(--accent); padding: .45rem .9rem; min-height: 40px; display: grid; place-items: center; }
 .cursos a[aria-current="page"] { background: var(--accent); color: #fff; }
 
@@ -67,6 +67,19 @@ a.parada:hover .nombre { color: var(--accent); }
 .meta { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin: 0 0 2rem; }
 .meta i { height: 12px; border-radius: 6px; background: var(--line); }
 .meta i.on { background: var(--oro); }
+.sonido { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--accent); display: grid; place-items: center; cursor: pointer; }
+.sonido:hover { background: var(--accent-soft); }
+.sonido[aria-pressed="false"] { color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  /* El segmento recién ganado da un salto; con la meta, salta toda la barra en ola. */
+  .meta i.nuevo { animation: gana .55s cubic-bezier(.3, 1.6, .5, 1); }
+  .meta.completa i { animation: gana .6s cubic-bezier(.3, 1.6, .5, 1) calc(var(--i) * 45ms) both; }
+  @keyframes gana {
+    0% { transform: scale(1); background: var(--line); }
+    40% { transform: scale(1.15, 1.9); box-shadow: 0 0 0 4px color-mix(in srgb, var(--oro) 35%, transparent); }
+    100% { transform: scale(1); }
+  }
+}
 h1.titulo-ej { font-size: 1rem; font-weight: 600; color: var(--muted); margin: 0 0 .6rem; }
 .variantes { display: flex; flex-wrap: wrap; gap: .4rem; margin: .4rem 0 1.4rem; }
 .variantes button { font: inherit; font-size: .92rem; font-weight: 600; border: 2px solid var(--line); background: var(--surface); color: var(--fg); padding: .35rem .85rem; border-radius: 999px; min-height: 40px; cursor: pointer; }
