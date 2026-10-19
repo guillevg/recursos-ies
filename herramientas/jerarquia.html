@@ -11,8 +11,9 @@
 <style>
   .entrada input[type="text"] { width: min(32rem, 100%); font-size: 1.2rem; }
   .lineas { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.5rem 0; }
-  .linea { font-size: 1.6rem; display: flex; align-items: center; gap: 0.25em; flex-wrap: wrap; justify-content: center; }
-  .linea .igual { color: var(--suave); margin-right: 0.3em; }
+  /* En línea, no flex: en un flex cada <sup> sería un bloque suelto, al lado y del mismo tamaño. */
+  .linea { font-size: 1.6rem; text-align: center; line-height: 1.8; }
+  .linea .igual { color: var(--suave); margin: 0 0.3em; }
   .marcada { background: color-mix(in srgb, var(--naranja) 55%, transparent); border-radius: 6px; padding: 0 0.15em; }
   .resultado { font-weight: 700; color: var(--acento); }
   .linea.final { font-size: 1.9rem; }
