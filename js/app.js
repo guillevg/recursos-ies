@@ -163,11 +163,22 @@ function ventana(href, titulo) {
   v.showModal();
   $("#ventana-cerrar").focus();
 }
+// Cargada la herramienta, el foco pasa dentro para que las flechas funcionen ya;
+// Esc dentro de ella también cierra la ventana.
+function ventanaCargada() {
+  const v = $("#ventana"), w = $("#ventana-marco").contentWindow;
+  if (!v.open) return;
+  try {
+    w.focus();
+    w.document.addEventListener("keydown", ev => { if (ev.key === "Escape") v.close(); });
+  } catch (e) {}
+}
 document.addEventListener("DOMContentLoaded", () => {
   const v = $("#ventana");
   $("#ventana-cerrar").addEventListener("click", () => v.close());
   v.addEventListener("click", ev => { if (ev.target === v) v.close(); });   // fuera de la ventana
   v.addEventListener("close", () => { $("#ventana-marco").src = "about:blank"; });
+  $("#ventana-marco").addEventListener("load", ventanaCargada);
 });
 
 // #curso/tema/actividad → la vista que toca. Sin curso, el último elegido.

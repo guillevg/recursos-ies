@@ -21,15 +21,16 @@ Repaso.tema("2eso", "SA1", {
       titulo: "Sumar y restar con rectángulos",
       sub: "Cortes cruzados para tener trozos iguales",
       herramienta: ["Sumar y restar fracciones con rectángulos", "fracciones.html"],
-      pista: "La primera fracción tiene cortes verticales y la segunda, horizontales. Si cortas cada rectángulo también en el otro sentido (las líneas discontinuas), los dos quedan con trozos iguales: cuenta cuántos trozos hay y cuántos están pintados.",
+      pista: "La primera fracción tiene cortes verticales y la segunda, horizontales. Si en tu cuaderno cortas cada rectángulo también en el otro sentido, los dos quedan con trozos iguales: cuenta cuántos trozos hay y cuántos están pintados.",
       nuevo() {
         const e = generarSuma([[2, 3], [2, 5], [3, 4], [3, 5], [4, 5], [2, 7], [3, 7], [5, 6], [3, 8]]);
         const { a, b, c, d, op, m, A, B, R } = e, N = b * d;
         return {
           html: `${op === "+" ? "Suma" : "Resta"} las fracciones. Usa los rectángulos para encontrar trozos iguales.`,
           dibujo(resuelto) {
-            const rA = rectSVG({ cols: b, filas: d, clase: j => j < a ? "c-azul" : "", cortes: "vH" });
-            const rB = rectSVG({ cols: b, filas: d, clase: (j, i) => i < c ? "c-naranja" : "", cortes: "hV" });
+            // Los cortes nuevos (discontinuos) solo en la corrección: antes los hace el alumnado en papel.
+            const rA = rectSVG({ cols: b, filas: d, clase: j => j < a ? "c-azul" : "", cortes: resuelto ? "vH" : "v" });
+            const rB = rectSVG({ cols: b, filas: d, clase: (j, i) => i < c ? "c-naranja" : "", cortes: resuelto ? "hV" : "h" });
             let s = `<div class="rects"><figure>${rA}<figcaption>${F(a, b)}</figcaption></figure><span class="signo">${SIGNO(op)}</span><figure>${rB}<figcaption>${F(c, d)}</figcaption></figure>`;
             s += `</div>`;
             if (resuelto) {
