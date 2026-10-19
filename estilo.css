@@ -1,81 +1,93 @@
-/* Web de repaso del alumnado. Una columna estrecha y tranquila; barra superior con el curso, migas, y contenido en listas o en una tarjeta de ejercicio con su dibujo. */
+/* Web de repaso del alumnado, diseño «Camino»: temas y actividades son paradas
+   de un recorrido vertical; el anillo de cada parada se llena con los aciertos
+   seguidos y se vuelve dorado al superarla. Una columna estrecha y mucho aire. */
 :root {
-  /* Los colores de las herramientas paso a paso (web/pasos.css): fondo blanco,
-     cuadros gris azulado, acento azul y las fracciones en azul y naranja. Solo claro. */
   color-scheme: light;
-  --bg: #ffffff;
-  --surface: #f4f7f9;
-  --fg: #1f1f1f;
-  --muted: #5b6770;
-  --line: #d8dee2;
-  --accent: #3B6E8F;
-  --accent-soft: #e3edf4;
-  --ok: #1e7d43;
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --fg: #1f2340;
+  --muted: #5b5f7a;
+  --line: #dfe0ec;
+  --accent: #4a43b8;
+  --accent-dark: #332d8a;
+  --accent-soft: #e9e8fa;
+  --oro: #f0b429;
+  --ok: #1f7a45;
   --ok-soft: #e3f2e8;
-  --bad: #c0392b;
+  --bad: #b3392b;
   --bad-soft: #fbeae8;
-  --azul: #7fb3d5;      /* primera fracción */
+  --azul: #7fb3d5;      /* primera fracción (como en las herramientas) */
   --naranja: #f5b041;   /* segunda fracción */
   --celda: #ffffff;
   --tinta-celda: #1f1f1f;
-  --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
 html, body { overscroll-behavior: none; }
-body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 17px; line-height: 1.5; }
-.wrap { max-width: 780px; margin: 0 auto; padding-inline: 16px; padding-block: 0 4rem; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 18px; line-height: 1.55; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { max-width: 640px; margin: 0 auto; padding-inline: 20px; padding-block: 0 6rem; }
 
-header.barra { border-bottom: 2px solid var(--accent); background: var(--bg); }
-header.barra .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-block: .8rem; }
-.marca { font-weight: 700; font-size: 1.2rem; color: var(--accent); text-decoration: none; }
-.marca span { color: var(--muted); font-weight: 400; }
-/* Pestañas como las de los modos de las herramientas */
-.cursos, .variantes { display: flex; flex-wrap: wrap; gap: .4rem; }
-.cursos a, .variantes button { font: inherit; font-size: .95rem; border: 1px solid var(--line); background: var(--bg); color: var(--fg); padding: .35rem .8rem; border-radius: 8px; cursor: pointer; }
-.cursos a:hover, .variantes button:hover { border-color: var(--accent); }
-.cursos a[aria-current="page"], .variantes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+header.barra .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-block: 1.3rem 2.4rem; }
+.marca { font-weight: 800; font-size: 1.1rem; color: var(--accent); text-decoration: none; }
+.cursos { display: flex; border: 2px solid var(--accent); border-radius: 12px; overflow: hidden; }
+.cursos a { font-size: .92rem; font-weight: 600; text-decoration: none; background: var(--surface); color: var(--accent); padding: .45rem .9rem; min-height: 40px; display: grid; place-items: center; }
+.cursos a[aria-current="page"] { background: var(--accent); color: #fff; }
 
+h1 { font-size: 1.9rem; font-weight: 800; line-height: 1.15; margin: 0 0 2rem; text-wrap: balance; }
+.atras { display: inline-flex; align-items: center; gap: .2rem; color: var(--muted); font-weight: 600; font-size: .95rem; text-decoration: none; min-height: 44px; margin: -1.4rem 0 .6rem -6px; }
+.atras .icono { width: 20px; height: 20px; flex: none; }
+.atras:hover { color: var(--accent); }
 
-.migas { font-size: .9rem; color: var(--muted); margin-top: 1.4rem; display: flex; flex-wrap: wrap; gap: .4rem; }
-.migas a { color: var(--accent); text-decoration: none; }
-.migas a:hover { text-decoration: underline; }
+/* El camino: una línea vertical con paradas (temas o actividades) e hitos (bloques) */
+.camino { list-style: none; margin: 0; padding: 0; position: relative; }
+.camino::before { content: ""; position: absolute; left: 31px; top: 20px; bottom: 20px; width: 4px; border-radius: 2px; background: var(--line); }
+.parada { position: relative; display: flex; align-items: center; gap: 1.1rem; padding: .55rem 0; min-height: 76px; color: inherit; text-decoration: none; }
+a.parada:hover .nombre { color: var(--accent); }
+.nombre { font-weight: 600; font-size: 1.1rem; line-height: 1.3; }
+.anillo { --p: 0; flex: none; width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; position: relative; font-weight: 800; color: var(--accent); background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); }
+.anillo::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--surface); }
+.anillo > * { position: relative; z-index: 1; }
+.anillo .icono { display: block; }
+.anillo.lleno, .anillo.lleno::after { background: var(--oro); color: var(--fg); }
+.parada.apagada { color: #9a9db3; }
+.parada.apagada .anillo { background: var(--bg); border: 3px dashed var(--line); color: #b5b7c9; }
+.parada.apagada .anillo::after { display: none; }
+.hito { position: relative; display: flex; align-items: center; gap: 1.1rem; margin: 1.8rem 0 .4rem; color: var(--muted); line-height: 1.3; }
+.hito:first-child { margin-top: 0; }
+.hito .letra { width: 66px; flex: none; display: grid; place-items: center; }
+.hito .letra span { background: var(--accent); color: #fff; font-weight: 800; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
+.hito.apagado { color: #9a9db3; }
+.hito.apagado .letra span { background: var(--bg); border: 2px dashed var(--line); color: #b5b7c9; }
 
-h1 { font-size: 1.7rem; line-height: 1.2; margin: .6rem 0 .8rem; color: var(--accent); text-wrap: balance; }
-h2 { font-size: 1.1rem; margin: 2rem 0 .5rem; color: var(--accent); text-wrap: balance; }
-.intro { color: var(--muted); margin: 0 0 1.2rem; max-width: 60ch; }
-
-/* Listas de temas y actividades */
-ul.lista { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
-ul.lista li { border-bottom: 1px solid var(--line); }
-ul.lista a, ul.lista .fila { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 2.2rem 1fr auto; gap: .8rem; align-items: center; width: 100%; padding: .85rem .3rem; cursor: pointer; }
-ul.lista a:hover .titulo, ul.lista a:focus-visible .titulo { color: var(--accent); text-decoration: underline; }
-ul.lista a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-ul.lista .fila { cursor: default; color: var(--muted); }
-.letra { width: 2.2rem; height: 2.2rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--accent-soft); color: var(--accent); font-size: .95rem; }
-.fila .letra { background: none; border: 1px dashed var(--line); color: var(--muted); }
-.titulo { display: block; font-weight: 700; min-width: 0; }
-.sub { display: block; font-size: .88rem; color: var(--muted); min-width: 0; }
-.estado { font-size: .85rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.estado.hecho { color: var(--ok); font-weight: 700; }
+/* Ejercicio */
+.meta { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin: 0 0 2rem; }
+.meta i { height: 12px; border-radius: 6px; background: var(--line); }
+.meta i.on { background: var(--oro); }
+h1.titulo-ej { font-size: 1rem; font-weight: 600; color: var(--muted); margin: 0 0 .6rem; }
+.variantes { display: flex; flex-wrap: wrap; gap: .4rem; margin: .4rem 0 1.4rem; }
+.variantes button { font: inherit; font-size: .92rem; font-weight: 600; border: 2px solid var(--line); background: var(--surface); color: var(--fg); padding: .35rem .85rem; border-radius: 999px; min-height: 40px; cursor: pointer; }
+.variantes button:hover { border-color: var(--accent); }
+.variantes button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.enunciado { font-size: 1.4rem; line-height: 1.5; margin: 0 0 1.8rem; }
+.dibujo { background: var(--surface); border-radius: 16px; padding: 1rem; margin: 0 0 1.8rem; }
 
 /* Fracciones escritas y casillas en forma de fracción */
-.f { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.1; margin: 0 .12em; font-variant-numeric: tabular-nums; }
-.f > span:first-child { border-bottom: 1.5px solid currentColor; padding: 0 .2em; }
+.f { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.1; margin: 0 .12em; font-variant-numeric: tabular-nums; font-weight: 700; }
+.f > span:first-child { border-bottom: 2px solid currentColor; padding: 0 .2em; }
 .fin { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; vertical-align: middle; }
 .fin input { width: 3.3rem; text-align: center; }
 .fin i { display: block; width: 100%; border-top: 2px solid var(--fg); }
-input.casilla { font: inherit; font-family: var(--mono); padding: .35rem .4rem; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--fg); }
-input.casilla:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+input.casilla { font: inherit; font-weight: 600; font-variant-numeric: tabular-nums; padding: .4rem .5rem; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); }
+input.casilla:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 input.casilla.mal { border-color: var(--bad); background: var(--bad-soft); }
 input.casilla.bien { border-color: var(--ok); }
 
-/* Ejercicio */
-.ejercicio { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.3rem; margin-top: 1rem; }
-.enunciado { font-size: 1.15rem; margin: 0 0 1rem; }
-.dato { font-family: var(--mono); font-size: 1.05em; background: var(--accent-soft); padding: .05em .35em; border-radius: 4px; white-space: nowrap; }
-.dibujo { margin: .4rem 0 1.2rem; }
+/* Datos del enunciado y dibujos */
+.dato { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dibujo svg { display: block; max-width: 100%; height: auto; }
 /* Fila de las dos fracciones a todo el ancho; el resultado, en otra fila debajo. */
 .rects { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .5rem .8rem; }
@@ -107,7 +119,7 @@ input.casilla.bien { border-color: var(--ok); }
 .linea-op input.casilla.num.ancho { width: 7.5rem; }
 .potencia-in { display: inline-flex; align-items: flex-start; gap: 3px; }
 .potencia-in input.casilla.num.sup { width: 2.9rem; font-size: .8rem; margin-top: -.9rem; }
-select.casilla { font: inherit; font-size: 1rem; }
+select.casilla { font: inherit; font-size: 1rem; padding: .4rem .5rem; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); }
 .campos.centrado { justify-content: center; margin-top: .9rem; }
 .expr { display: block; text-align: center; font-size: 1.3rem; font-variant-numeric: tabular-nums; margin-top: .6rem; overflow-wrap: anywhere; }
 .nota-linea { text-align: center; font-size: .85rem; color: var(--muted); margin: .5rem 0 0; }
@@ -119,33 +131,35 @@ select.casilla { font: inherit; font-size: 1rem; }
 .campo label { font-size: .88rem; color: var(--muted); }
 .campo input.casilla { width: 9rem; }
 .potencia { display: flex; align-items: end; gap: .4rem; }
-.potencia .x { padding-bottom: .4rem; font-family: var(--mono); }
+.potencia .x { padding-bottom: .5rem; font-weight: 600; }
 .potencia input.exp { width: 4.5rem; }
 
-.acciones { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.2rem; }
-.btn { font: inherit; font-size: .95rem; padding: .5rem 1rem; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
-.btn:hover { border-color: var(--accent); }
-.btn.principal { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acciones { display: flex; justify-content: center; margin-top: 1.8rem; }
+.principal { font: inherit; font-size: 1.1rem; font-weight: 800; border: 0; border-radius: 14px; padding: 0 2.2rem; min-height: 58px; min-width: 12rem; background: var(--accent); color: #fff; cursor: pointer; box-shadow: 0 4px 0 var(--accent-dark); }
+.principal:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--accent-dark); }
+.ayudas { display: flex; justify-content: center; gap: 1.4rem; margin-top: 2.2rem; }
+.ayudas button { width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; cursor: pointer; }
+.ayudas button:hover { background: #dcdaf7; }
+.ayudas button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 
-.respuesta { margin-top: 1rem; padding: .8rem 1rem; border-radius: 8px; }
-.respuesta.bien { background: var(--ok-soft); color: var(--ok); }
-.respuesta.mal { background: var(--bad-soft); color: var(--bad); }
-.respuesta p { margin: .2rem 0; }
-.respuesta .explica { color: var(--fg); }
-.operaciones { margin-top: 1rem; padding: .7rem 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
-.operaciones h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 .4rem; }
+/* Avisos: corrección, pista y operaciones */
+.aviso { margin-top: 1.2rem; padding: .8rem 1.1rem; border-radius: 14px; background: var(--surface); border: 2px solid; }
+.aviso p { margin: .2rem 0; }
+.aviso.bien { border-color: var(--ok); color: var(--ok); }
+.aviso.mal { border-color: var(--bad); color: var(--bad); }
+.aviso.pista { border-color: var(--accent-soft); color: var(--fg); }
+.aviso .explica { color: var(--fg); }
+.aviso a { color: var(--accent); font-weight: 700; }
+.operaciones { margin-top: 1rem; padding: .7rem 1.1rem; border-radius: 14px; background: var(--surface); }
+.operaciones h3 { font-size: .9rem; font-weight: 600; color: var(--muted); margin: 0 0 .3rem; }
 .operaciones p { margin: .45rem 0; font-size: 1.08rem; font-variant-numeric: tabular-nums; }
-/* Como el cuadro de explicación de las herramientas */
-.pista { margin-top: 1rem; background: var(--bg); border-left: 5px solid var(--accent); border-radius: 6px; padding: .5rem 1rem; color: var(--fg); }
-.pista a { color: var(--accent); font-weight: 700; }
 
-.marcador { display: flex; align-items: center; gap: .8rem; margin-top: 1rem; font-size: .9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.puntos { display: flex; gap: 5px; }
-.puntos i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line); }
-.puntos i.on { background: var(--ok); border-color: var(--ok); }
-
-@media (max-width: 520px) { .rects { gap: .4rem; } .linea-op { font-size: 1.15rem; } .fin input { width: 2.9rem; } }
-@media (prefers-reduced-motion: no-preference) { .respuesta { animation: entra .18s ease-out; } @keyframes entra { from { transform: translateY(-3px); opacity: .4; } } }
-.cursos a { text-decoration: none; }
-.pie { margin-top: 3rem; font-size: .85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+@media (max-width: 520px) {
+  body { font-size: 17px; }
+  h1 { font-size: 1.6rem; }
+  .enunciado { font-size: 1.25rem; }
+  .rects { gap: .4rem; } .linea-op { font-size: 1.15rem; } .fin input { width: 2.9rem; }
+  .meta { gap: 3px; }
+}
+@media (prefers-reduced-motion: no-preference) { .aviso { animation: entra .18s ease-out; } @keyframes entra { from { transform: translateY(-3px); opacity: .4; } } }
+@media (prefers-reduced-motion: reduce) { .principal:active { transform: none; } }
