@@ -104,8 +104,8 @@ Repaso.tema("2eso", "SA1", {
         return {
           html: ctx.t(f, miles(X)),
           pasos: tipo === "total" ? ["barras.html", "parte", { a: n, b: d, conocida: "resto", valor: X }] : ["barras.html", "cantidad", { a: n, b: d, total: X }],
-          dibujo: r => cantidadSVG({ d, n, ...llaves(r), u: r ? u : null }) + `<div class="leyenda"><span><i style="background:var(--azul)"></i>${ctx.pint} (${f})</span><span><i style="background:var(--celda)"></i>el resto (${F(k, d)})</span></div>`,
-          campos: [{ id: "u", etiqueta: `Un trozo (${F(1, d)})` }, { id: "r", etiqueta: `Respuesta (${U})` }],
+          dibujo: r => cantidadSVG({ d, n, ...llaves(r), u: r ? u : null }) + `<div class="leyenda"><span><i style="background:var(--azul)"></i>${ctx.pint} ${PF(f)}</span><span><i style="background:var(--celda)"></i>el resto ${PF(F(k, d))}</span></div>`,
+          campos: [{ id: "u", etiqueta: `Un trozo ${PF(F(1, d))}` }, { id: "r", etiqueta: `Respuesta (${U})` }],
           _ok: { u: String(u), r: String(pregunta) },
           comprobar(v) {
             const uu = num(v.u), r = num(v.r);
@@ -139,7 +139,7 @@ Repaso.tema("2eso", "SA1", {
     queda: {
       titulo: "Lo que queda",
       sub: "Dos fracciones seguidas: «de lo que quedaba»",
-      herramienta: ["Fracciones con el modelo de barras", "barras.html#queda"],
+      herramienta: ["Fracciones con el modelo de barras", "barras.html#quedan"],
       pista: "Dibuja una barra con el total. Después de la primera parte, lo que queda es la barra nueva: córtala en trozos iguales para la segunda.",
       nuevo() {
         const b = elegir([3, 4, 5]), a = azar(1, b - 1), d = elegir([2, 3, 4, 5]), c = azar(1, d - 1);
@@ -152,6 +152,7 @@ Repaso.tema("2eso", "SA1", {
         return {
           html: `${ctx[0]} ${ctx[1]}`,
           campos: [{ id: "r1", etiqueta: `Quedan (${ctx[2]})` }],
+          pasos: ["barras.html", "quedan", { a, b, c, d, total }],
           _ok: { r1: String(quedan) },
           comprobar(v) {
             const x = num(v.r1);
@@ -394,13 +395,13 @@ Repaso.tema("2eso", "SA1", {
             expr = `${qF(x)}<span class="op">+</span>${qF(y)}<span class="op">·</span>${qF(z)}`;
             pasos = [`Primero la multiplicación: ${qF(y)} · ${qF(z)} = ${qF(P)}`, `Después la suma: ${qF(x)} + ${qF(P)} = <b>${qF(R)}</b>`]; }
           else if (t === 2) { const S = qSum(x, y); R = qMul(S, z); LR = qSum(x, qMul(y, z));
-            expr = `<span class="op">(</span>${qF(x)}<span class="op">+</span>${qF(y)}<span class="op">) ·</span>${qF(z)}`;
+            expr = `<span class="op pg">(</span>${qF(x)}<span class="op">+</span>${qF(y)}<span class="op pg">)</span><span class="op">·</span>${qF(z)}`;
             pasos = [`Primero el paréntesis: ${qF(x)} + ${qF(y)} = ${qF(S)}`, `Después la multiplicación: ${qF(S)} · ${qF(z)} = <b>${qF(R)}</b>`]; }
           else if (t === 3) { const S = qSum(z, w), D = qDiv(y, S); R = qRes(x, D); LR = qDiv(qRes(x, y), S);
-            expr = `${qF(x)}<span class="op">−</span>${qF(y)}<span class="op">: (</span>${qF(z)}<span class="op">+</span>${qF(w)}<span class="op">)</span>`;
+            expr = `${qF(x)}<span class="op">−</span>${qF(y)}<span class="op">:</span><span class="op pg">(</span>${qF(z)}<span class="op">+</span>${qF(w)}<span class="op pg">)</span>`;
             pasos = [`El paréntesis: ${qF(z)} + ${qF(w)} = ${qF(S)}`, `La división: ${qF(y)} : ${qF(S)} = ${qF(y)} · ${qF(Q(S.d, S.n))} = ${qF(D)}`, `La resta: ${qF(x)} − ${qF(D)} = <b>${qF(R)}</b>`]; }
           else { const S = qSum(y, z), P = qMul(x, S); R = qRes(Q(n), P); LR = qMul(qRes(Q(n), x), S);
-            expr = `${n}<span class="op">−</span>${qF(x)}<span class="op">· (</span>${qF(y)}<span class="op">+</span>${qF(z)}<span class="op">)</span>`;
+            expr = `${n}<span class="op">−</span>${qF(x)}<span class="op">·</span><span class="op pg">(</span>${qF(y)}<span class="op">+</span>${qF(z)}<span class="op pg">)</span>`;
             pasos = [`El paréntesis: ${qF(y)} + ${qF(z)} = ${qF(S)}`, `La multiplicación: ${qF(x)} · ${qF(S)} = ${qF(P)}`, `La resta: ${n} − ${qF(P)} = <b>${qF(R)}</b>`]; }
         } while (R.n <= 0 || R.d > 60 || R.n > 120 || (LR.n === R.n && LR.d === R.d));
         return {

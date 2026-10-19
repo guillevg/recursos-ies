@@ -1,6 +1,7 @@
 // Modelo de barras (partes y todo) para problemas de fracciones, paso a paso.
-// Tres modos: la fracción de una cantidad, el total a partir de una parte y
-// «de lo que queda» (dos fracciones encadenadas y lo que sobra al final).
+// Cuatro modos: la fracción de una cantidad, el total a partir de una parte y
+// «de lo que queda» (dos fracciones encadenadas), hacia atrás (sé lo que sobra
+// al final: ¿cuál era el total?) y hacia delante (sé el total: ¿cuánto sobra?).
 // Los cálculos (`calcular`) están separados del dibujo para poder probarlos
 // con Node (tests/test_web_barras.js); el dibujo usa Pasos (pasos.js).
 "use strict";
@@ -38,7 +39,16 @@ const Barras = (() => {
     return { a, b, c, d, final, u2, resto, u1, total, primero: a * u1, segundo: c * u2 };
   }
 
-  const calcular = { cantidad, parte, queda };
+  // Hacia delante: del total se va a/b; después, c/d de lo que quedaba. ¿Cuánto queda?
+  function quedan({ a, b, c, d, total }) {
+    if (!(b >= 2 && a >= 1 && a < b)) return { error: "La primera fracción tiene que ser menor que 1 y mayor que 0." };
+    if (!(d >= 2 && c >= 1 && c < d)) return { error: "La segunda fracción tiene que ser menor que 1 y mayor que 0." };
+    if (!(total > 0)) return { error: "El total tiene que ser mayor que 0." };
+    const u1 = total / b, resto = (b - a) * u1, u2 = resto / d;
+    return { a, b, c, d, total, u1, resto, u2, final: (d - c) * u2, primero: a * u1, segundo: c * u2 };
+  }
+
+  const calcular = { cantidad, parte, queda, quedan };
 
   // ------------------------------------------------------------- ejemplos
   // Los del banco de la SA1 (cuaderno del alumnado, bloque A) y algunos más.
@@ -67,6 +77,12 @@ const Barras = (() => {
       { etiqueta: "Depósito: 1/4 y 2/3", a: 1, b: 4, c: 2, d: 3, final: 15,
         texto: "De un depósito se gasta primero 1/4 del agua y después 2/3 de lo que quedaba. Quedan 15 litros. ¿Cuántos litros tenía?" },
     ],
+    quedan: [
+      { etiqueta: "Depósito: 1/4 y 2/3 de 1200", a: 1, b: 4, c: 2, d: 3, total: 1200,
+        texto: "Un depósito tiene 1200 litros. El lunes se gasta 1/4 del agua y el martes 2/3 de lo que quedaba. ¿Cuántos litros quedan?" },
+      { etiqueta: "Paga: 1/3 y 1/4 de 60", a: 1, b: 3, c: 1, d: 4, total: 60,
+        texto: "De una paga de 60 € gasto 1/3 en el cine y 1/4 de lo que me quedaba en la merienda. ¿Cuánto dinero me queda?" },
+    ],
   };
 
   // Datos al azar con resultados enteros.
@@ -82,6 +98,11 @@ const Barras = (() => {
       return { a, b, conocida, valor: k * ent(2, 25) };
     }
     const b = ent(2, 6), a = ent(1, b - 1), d = ent(2, 5), c = ent(1, d - 1);
+    if (modo === "quedan") {
+      // total = b·u1 y lo que queda, (b − a)·u1, tiene que repartirse en d trozos.
+      const paso = d / Pasos.mcd(b - a, d);
+      return { a, b, c, d, total: b * paso * ent(1, Math.max(1, Math.floor(30 / paso))) };
+    }
     // final = (d − c)·u2 y resto = d·u2 tiene que repartirse en b − a trozos.
     const paso = (b - a) / Pasos.mcd(b - a, d);
     const u2 = paso * ent(1, Math.max(1, Math.floor(20 / paso)));

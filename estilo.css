@@ -78,6 +78,9 @@ h1.titulo-ej { font-size: 1rem; font-weight: 600; color: var(--muted); margin: 0
 /* Fracciones escritas y casillas en forma de fracción */
 .f { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.1; margin: 0 .12em; font-variant-numeric: tabular-nums; font-weight: 700; }
 .f > span:first-child { border-bottom: 2px solid currentColor; padding: 0 .2em; }
+/* Paréntesis altos para lo que lleva fracciones (PF en comun.js) */
+.pg { display: inline-block; font-size: 1.9em; font-weight: 400; line-height: 1; vertical-align: middle; transform: scaleX(.7); margin: 0 -.08em; position: relative; top: -.06em; }
+.linea-op .pg { font-size: 2.2em; margin: 0 -.1em; }
 .fin { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; vertical-align: middle; }
 .fin input { width: 3.3rem; text-align: center; }
 .fin i { display: block; width: 100%; border-top: 2px solid var(--fg); }

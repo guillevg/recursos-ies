@@ -111,18 +111,18 @@ function actividad(c, t, def, claveAct) {
     });
     $("#b-pista").addEventListener("click", () => {
       if ($("#pista")) return;
-      // Con ej.pasos, la herramienta se abre con este mismo ejercicio (datos y enunciado en el ancla).
-      const [nombre, pagina] = A.herramienta;
-      let href = `herramientas/${pagina}`, texto = `Verlo paso a paso: ${nombre}`;
+      // El paso a paso solo si la herramienta puede abrir este mismo ejercicio
+      // (ej.pasos: datos y enunciado en el ancla); nunca la herramienta entera.
+      let enlace = "";
       if (ej.pasos) {
         const [pag, modo, datos] = ej.pasos, q = new URLSearchParams(Object.entries(datos).map(([x, y]) => [x, String(y)]));
         if (modo) q.set("texto", textoPlano(ej.html));
-        href = `herramientas/${pag}#${modo ? modo + "?" : ""}${q}`;
-        texto = "Ver este ejercicio paso a paso";
+        const href = `herramientas/${pag}#${modo ? modo + "?" : ""}${q}`;
+        enlace = `<p><a href="${href}" target="_blank" rel="noopener">Ver este ejercicio paso a paso</a></p>`;
       }
       $("#b-pista").setAttribute("aria-pressed", "true");
-      $("#salida").insertAdjacentHTML("afterbegin", `<div class="aviso pista" id="pista"><p>${A.pista}</p><p><a href="${href}" target="_blank" rel="noopener">${texto}</a></p></div>`);
-      $("#pista a").addEventListener("click", ev => { ev.preventDefault(); ventana(href, nombre); });
+      $("#salida").insertAdjacentHTML("afterbegin", `<div class="aviso pista" id="pista"><p>${A.pista}</p>${enlace}</div>`);
+      $("#pista a")?.addEventListener("click", ev => { ev.preventDefault(); ventana(ev.currentTarget.href, A.herramienta[0]); });
     });
     $("#b-otro").addEventListener("click", () => { if (!resuelto) progreso.set(k, 0); ej = A.nuevo(variante); pintar(); });
     entradas()[0].focus({ preventScroll: true });

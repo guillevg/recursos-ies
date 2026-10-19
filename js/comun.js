@@ -18,6 +18,8 @@ const fmt = x => { const r = Math.round(x * 1e6) / 1e6; return String(r).replace
 const miles = s => String(s).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 const F = (n, d) => `<span class="f"><span>${n}</span><span>${d}</span></span>`;
 const FIN = (idn, idd) => `<span class="fin"><input class="casilla" id="f-${idn}" inputmode="numeric" autocomplete="off" aria-label="Numerador"><i></i><input class="casilla" id="f-${idd}" inputmode="numeric" autocomplete="off" aria-label="Denominador"></span>`;
+// Paréntesis altos alrededor de algo con fracciones (como \left( \right) de LaTeX).
+const PF = html => `<span class="pg">(</span>${html}<span class="pg">)</span>`;
 const SIGNO = op => op === "+" ? "+" : "−";
 function fraccion(t) { const m = String(t).trim().match(/^(\d+)\s*\/\s*(\d+)$/); return m && +m[2] ? [+m[1], +m[2]] : null; }
 function irreducible(_, b) { let n; do { n = azar(1, b - 1); } while (mcd(n, b) !== 1); return n; }

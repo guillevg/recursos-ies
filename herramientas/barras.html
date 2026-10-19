@@ -20,7 +20,8 @@
 <nav class="modos" role="tablist" aria-label="Tipo de problema">
   <button type="button" role="tab" data-modo="cantidad">La fracción de una cantidad</button>
   <button type="button" role="tab" data-modo="parte">Conozco una parte: ¿cuál es el total?</button>
-  <button type="button" role="tab" data-modo="queda">«De lo que queda»</button>
+  <button type="button" role="tab" data-modo="queda">«De lo que queda»: ¿cuál era el total?</button>
+  <button type="button" role="tab" data-modo="quedan">«De lo que queda»: ¿cuánto sobra?</button>
 </nav>
 
 <form class="entrada" id="entrada" autocomplete="off">
@@ -38,6 +39,12 @@
     primero <span class="frac-input"><input id="qa" class="corto" type="number" min="1" max="11" aria-label="Numerador de la primera fracción"><hr><input id="qb" class="corto" type="number" min="2" max="12" aria-label="Denominador de la primera fracción"></span>,
     después <span class="frac-input"><input id="qc" class="corto" type="number" min="1" max="11" aria-label="Numerador de la segunda fracción"><hr><input id="qd" class="corto" type="number" min="2" max="12" aria-label="Denominador de la segunda fracción"></span>
     de lo que queda; al final quedan <input id="qf" type="number" min="1" max="99999" aria-label="Lo que queda al final">
+  </span>
+  <span data-para="quedan">
+    de <input id="rt" type="number" min="1" max="99999" aria-label="Total">
+    se va <span class="frac-input"><input id="ra" class="corto" type="number" min="1" max="11" aria-label="Numerador de la primera fracción"><hr><input id="rb" class="corto" type="number" min="2" max="12" aria-label="Denominador de la primera fracción"></span>,
+    después <span class="frac-input"><input id="rc" class="corto" type="number" min="1" max="11" aria-label="Numerador de la segunda fracción"><hr><input id="rd" class="corto" type="number" min="2" max="12" aria-label="Denominador de la segunda fracción"></span>
+    de lo que queda
   </span>
   <button type="submit" class="principal">Empezar</button>
   <div class="ejemplos" id="ejemplos"></div>
@@ -144,6 +151,38 @@ function dibujarQueda(r) {
       ${exacto ? "" : `<p class="aviso">Con estos datos los trozos no salen exactos: revisa los números del problema.</p>`}`],
   ];
 }
+// Hacia delante: el total, lo que se va primero, lo que quedaba (ampliado) y lo que sobra.
+function dibujarQuedan(r) {
+  const { a, b, c, d, total, u1, resto, u2, final, primero, segundo } = r;
+  const g = nuevaEscena(380), y1 = 70, y2 = 240;
+  const p1 = barra(g, { y: y1, partes: b, color: k => k < a ? "azul" : "blanco" });
+  const xr = X0 + a * p1;
+  const t = svg("text", { x: X0, y: y1 - 44, class: "rotulo-barra" }, g); t.textContent = "El total";
+  llave(g, { x1: X0, x2: X0 + ANCHO, y: y1, arriba: true, texto: `${num(total)}` });
+  llave(g, { x1: X0, x2: xr, y: y1, arriba: false, texto: `${frac_txt(a, b)}`, suave: true });
+  valores(g, { y: y1, p: p1, desde: 0, hasta: b, texto: num(u1), clase: "ver1" });
+  llave(g, { x1: xr, x2: X0 + ANCHO, y: y1, arriba: false, texto: `quedan ${num(resto)}`, clase: "ver2" });
+  const zoom = svg("g", { class: "ver3" }, g);
+  const yb = y1 + ALTO + 52;
+  svg("path", { d: `M ${xr} ${y1 + ALTO} V ${yb} L ${X0} ${y2} M ${X0 + ANCHO} ${y1 + ALTO} V ${y2}`, class: "union" }, zoom);
+  const t2 = svg("text", { x: (X0 + ANCHO) / 2, y: y2 - 12, class: "rotulo-barra", "text-anchor": "middle" }, zoom); t2.textContent = "Lo que quedaba (ampliado)";
+  const p2 = barra(zoom, { y: y2, partes: d, color: k => k < c ? "naranja" : "blanco" });
+  llave(zoom, { x1: X0, x2: X0 + c * p2, y: y2, arriba: false, texto: `${frac_txt(c, d)} de lo que quedaba`, suave: true });
+  valores(g, { y: y2, p: p2, desde: 0, hasta: d, texto: num(u2), clase: "ver4" });
+  llave(g, { x1: X0 + c * p2, x2: X0 + ANCHO, y: y2, arriba: false, texto: `sobran ${num(final)}`, clase: "ver5" });
+  const exacto = Pasos.esEntero(u1) && Pasos.esEntero(u2);
+  return [
+    ["El problema", `<p>Del total, <b>${num(total)}</b>, primero se va ${frac(a, b)} (en azul). Después se va ${frac(c, d)} de <b>lo que quedaba</b>, no del total. ¿Cuánto sobra al final?</p>`],
+    ["Un trozo del total", `<p>La barra del total tiene ${b} trozos: cada uno vale ${num(total)} : ${b} = <b>${num(u1)}</b>.</p>`],
+    ["Lo que quedaba", `<p>Se van ${a} ${a === 1 ? "trozo" : "trozos"} y quedan ${b - a}: ${b - a} · ${num(u1)} = <b>${num(resto)}</b>.</p>`],
+    ["Lo que quedaba, en grande", `<p>Esos ${num(resto)} los dibujamos en otra barra y la cortamos en ${d} trozos: se van ${c} (en naranja).</p>`],
+    ["Un trozo de lo que quedaba", `<p>Cada trozo de la segunda barra vale ${num(resto)} : ${d} = <b>${num(u2)}</b>.</p>`],
+    ["Lo que sobra", `<p>Sobran ${d - c} ${d - c === 1 ? "trozo" : "trozos"}: ${d - c} · ${num(u2)} = <b>${num(final)}</b>.</p>
+      <p>Comprobación: ${num(primero)} + ${num(segundo)} + ${num(final)} = ${num(total)}.</p>
+      <p>Error típico: restar ${frac(a, b)} y ${frac(c, d)} del total, como si las dos fueran del total.</p>
+      ${exacto ? "" : `<p class="aviso">Con estos datos los trozos no salen exactos: revisa los números del problema.</p>`}`],
+  ];
+}
 const frac_txt = (n, d) => `${n}/${d}`;
 
 // ------------------------------------------------------------- datos y UI
@@ -151,6 +190,7 @@ const MODOS = {
   cantidad: { campos: { a: "ca", b: "cb", total: "ct" }, dibujar: dibujarCantidad },
   parte: { campos: { a: "pa", b: "pb", conocida: "pc", valor: "pv" }, dibujar: dibujarParte },
   queda: { campos: { a: "qa", b: "qb", c: "qc", d: "qd", final: "qf" }, dibujar: dibujarQueda },
+  quedan: { campos: { a: "ra", b: "rb", c: "rc", d: "rd", total: "rt" }, dibujar: dibujarQuedan },
 };
 for (const [m, def] of Object.entries(MODOS))
   Object.assign(def, { calcular: Barras.calcular[m], ejemplos: Barras.EJEMPLOS[m], azar: () => Barras.azar(m) });
