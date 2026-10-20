@@ -117,7 +117,10 @@
 <script>
 "use strict";
 const { svg, num, texto, X0, ANCHO, ALTO, llave } = Pasos;
-const con = (v, u) => u ? `${num(v)} ${u}` : num(v);
+// Unidad en singular para el 1: «personas» → «persona», «pintores» → «pintor».
+// Las abreviaturas (kg, h, L, €…) no cambian.
+const singular = u => /[lnrdj]es$/.test(u) ? u.slice(0, -2) : /ces$/.test(u) ? u.slice(0, -3) + "z" : u.replace(/(?<=[a-záéíóú]{2})s$/, "");
+const con = (v, u) => u ? `${num(v)} ${v === 1 ? singular(u) : u}` : num(v);
 
 // ------------------------------------------------------------------ directa
 function dibujarDirecta(r) {
@@ -130,7 +133,7 @@ function dibujarDirecta(r) {
   R.marca(x, con(y, ub), "ver2", true);
   return [
     ["Lo que sabemos", `<p>${con(a, ua)} → ${con(b, ub)}. Arriba, ${ua || "la primera magnitud"}; abajo, ${ub || "la segunda"}. Si una se duplica, la otra también: es <b>proporcionalidad directa</b>.</p>`],
-    ["Reducción a la unidad", `<p>Dividimos las dos entre ${num(a)}: a 1${ua ? " " + ua.replace(/s$/, "") : ""} le corresponde ${num(b)} : ${num(a)} = <b>${con(k, ub)}</b>.</p>`],
+    ["Reducción a la unidad", `<p>Dividimos las dos entre ${num(a)}: a 1${ua ? " " + singular(ua) : ""} le corresponde ${num(b)} : ${num(a)} = <b>${con(k, ub)}</b>.</p>`],
     [`Para ${con(x, ua)}`, `<p>Multiplicamos las dos por ${num(x)}: ${num(x)} · ${num(k)} = <b>${con(y, ub)}</b>.</p>`],
     ["La constante", `<p>En toda la recta, abajo es <b>${num(k)} veces</b> arriba: es la constante de proporcionalidad. ${con(x, ua)} → ${num(x)} · ${num(k)} = ${con(y, ub)}.</p>
       <p>Comprobación: ${num(b)} : ${num(a)} = ${num(y)} : ${num(x)} = ${num(k)}.</p>`],
@@ -172,7 +175,7 @@ function dibujarEscala(r) {
 // entre sus tres posiciones (--x0/--y0, --x1/--y1, --x3/--y3).
 function dibujarInversa(r) {
   const { a, b, x, ua, ub, total, y, filas, piezas, horas } = r;
-  const mas = x > a, uno = ua ? ua.replace(/(es|s)$/, "") : "";
+  const mas = x > a, uno = ua ? singular(ua) : "";
   const tabla = `<table class="flechas"><tr><th>${ua || "1ª magnitud"}</th><td>${num(a)}</td><td class="op">: ${num(a)} →</td><td>1</td><td class="op">· ${num(x)} →</td><td>${num(x)}</td></tr>
     <tr><th>${ub || "2ª magnitud"}</th><td>${num(b)}</td><td class="op">· ${num(a)} →</td><td>${num(total)}</td><td class="op">: ${num(x)} →</td><td><b>${num(y)}</b></td></tr></table>`;
   const pasos = [

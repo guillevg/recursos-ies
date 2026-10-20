@@ -150,7 +150,11 @@ const Jerarquia = (() => {
         const cs = candidatas(n);
         if (!cs.length) throw new Error("sin operaciones");
         const maxProf = Math.max(...cs.map(c => c.prof));
-        const elegida = cs.filter(c => c.prof === maxProf).sort((a, b) => a.orden - b.orden)[0];
+        // Primero todas las multiplicaciones y divisiones, aunque una suma o
+        // resta ya se pueda hacer (1 + 2 + 3 · 4 → 1 + 2 + 12, no 3 + 3 · 4).
+        const esMult = c => c.op === "·" || c.op === ":";
+        const enProf = cs.filter(c => c.prof === maxProf);
+        const elegida = (enProf.some(esMult) ? enProf.filter(esMult) : enProf).sort((a, b) => a.orden - b.orden)[0];
         const nodo = en(n, elegida.camino);
         const a = valor(nodo.izq), b = valor(nodo.der), v = op[nodo.op](a, b);
         const resto = fuera(n), mult = nodo.op === "·" || nodo.op === ":";

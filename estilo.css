@@ -146,13 +146,13 @@ input.casilla.bien { border-color: var(--ok); }
 .elegir.mal { box-shadow: 0 0 0 2px var(--bad); }
 .elegir.bien input:checked + span { background: var(--ok); border-color: var(--ok); }
 .campo .etiqueta { font-size: .88rem; color: var(--muted); }
-.campos.centrado { justify-content: center; margin-top: .9rem; }
+.campos.centrado { margin-top: .9rem; }
 .expr { display: block; text-align: center; font-size: 1.3rem; font-variant-numeric: tabular-nums; margin-top: .6rem; overflow-wrap: anywhere; }
 .nota-linea { text-align: center; font-size: .85rem; color: var(--muted); margin: .5rem 0 0; }
 .rects.uno { grid-template-columns: minmax(0, 1fr); width: min(100%, 340px); margin-inline: auto; }
 .eje { stroke: var(--fg); stroke-width: 2; }
 .guia { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
-.campos { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+.campos { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; align-items: end; }
 .campo { display: flex; flex-direction: column; gap: .25rem; }
 .campo label { font-size: .88rem; color: var(--muted); }
 .campo input.casilla { width: 9rem; }
