@@ -187,8 +187,8 @@ function dibujarEncadenados(r) {
   caja(xs[1], medio, "ver1");
   caja(xs[2], fin, "ver2");
   const flecha = (x1, x2, txt, clase) => { const f = svg("g", { class: clase }, g); svg("path", { d: `M ${x1 + 88} ${y} L ${x2 - 90} ${y}`, class: "flecha" }, f); texto(f, { x: (x1 + x2) / 2, y: y - 44, t: txt, clase: "flecha-txt" }); };
-  flecha(xs[0], xs[1], `${signo(s1, p1)}: ×${num(m1)}`, "ver1");
-  flecha(xs[1], xs[2], `${signo(s2, p2)}: ×${num(m2)}`, "ver2");
+  flecha(xs[0], xs[1], `${signo(s1, p1)} = ×${num(m1)}`, "ver1");
+  flecha(xs[1], xs[2], `${signo(s2, p2)} = ×${num(m2)}`, "ver2");
   const tot = svg("g", { class: "ver3" }, g);
   svg("path", { d: `M ${xs[0]} ${y + 36} Q ${xs[1]} ${y + 150} ${xs[2]} ${y + 38}`, class: "flecha total" }, tot);
   texto(tot, { x: xs[1], y: y + 120, t: `×${num(m1)} · ${num(m2)} = ×${num(m)}`, clase: "flecha-txt total" });

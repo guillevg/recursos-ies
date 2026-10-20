@@ -201,3 +201,8 @@ input.casilla.bien { border-color: var(--ok); }
 }
 @media (prefers-reduced-motion: no-preference) { .aviso { animation: entra .18s ease-out; } @keyframes entra { from { transform: translateY(-3px); opacity: .4; } } }
 @media (prefers-reduced-motion: reduce) { .principal:active { transform: none; } }
+
+/* Tabla de valores en un enunciado (SA2: ¿directa, inversa o ninguna?) */
+.tabla-valores { border-collapse: collapse; margin: 0.8rem auto 0; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.tabla-valores th, .tabla-valores td { border: 1px solid var(--line); padding: 0.35rem 0.8rem; text-align: center; background: var(--surface); }
+.tabla-valores th { font-weight: 700; background: var(--accent-soft); text-align: right; }
