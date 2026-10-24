@@ -52,6 +52,12 @@
   .rotulo-tabla { font-size: 17px; text-anchor: end; fill: var(--tinta); font-weight: 700; }
   .gratis { fill: url(#rayas-oferta); }
   .rayas { stroke: #c9d1d7; stroke-width: 3; }
+  .frac-dir { font-size: 24px; text-anchor: middle; fill: var(--tinta); }
+  .frac-dir.fuerte { fill: var(--rojo); font-weight: 700; }
+  .raya-frac { stroke: var(--tinta); stroke-width: 2.5; }
+  .flecha { fill: none; stroke: var(--rojo); stroke-width: 2.2; }
+  .punta { fill: var(--rojo); }
+  .op-flecha { font-size: 21px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
 <script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
@@ -123,19 +129,65 @@ const singular = u => /[lnrdj]es$/.test(u) ? u.slice(0, -2) : /ces$/.test(u) ? u
 const con = (v, u) => u ? `${num(v)} ${v === 1 ? singular(u) : u}` : num(v);
 
 // ------------------------------------------------------------------ directa
+// Tres fracciones (lo que se busca arriba, lo que se conoce abajo): los
+// datos = la unidad (vacía al principio) = la situación final, con «?».
+// Paso 1: en la del medio, 1 de la magnitud que se conoce al final. Paso 2:
+// flechas curvas «: a» de la primera a la del medio; paso 3, «· x» de la del
+// medio a la última. Debajo, la recta doble, al mismo ritmo.
+function fraccionesDirecta(g, r) {
+  const { a, b, x, ua, ub, k, y } = r;
+  const c = [170, 400, 630], arriba = 78, raya = 92, abajo = 121, med = 46;
+  const punta = svg("marker", { id: "punta-directa", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" }, svg("defs", {}, g));
+  svg("path", { d: "M 0 0 L 10 5 L 0 10 Z", class: "punta" }, punta);
+  const fraccion = (cx, num_, den, clases = ["", ""]) => {
+    svg("line", { x1: cx - 72, y1: raya, x2: cx + 72, y2: raya, class: "raya-frac" }, g);
+    if (num_ !== null) texto(g, { x: cx, y: arriba, t: num_, clase: "frac-dir " + clases[0] });
+    if (den !== null) texto(g, { x: cx, y: abajo, t: den, clase: "frac-dir " + clases[1] });
+  };
+  fraccion(c[0], con(b, ub), con(a, ua));
+  fraccion(c[1], null, null);
+  fraccion(c[2], null, con(x, ua));
+  for (const xx of [(c[0] + c[1]) / 2, (c[1] + c[2]) / 2]) texto(g, { x: xx, y: raya + 8, t: "=", clase: "frac-dir" });
+  texto(g, { x: c[1], y: abajo, t: con(1, ua), clase: "frac-dir fuerte ver1" });
+  texto(g, { x: c[1], y: arriba, t: con(k, ub), clase: "frac-dir ver2" });
+  texto(g, { x: c[2], y: arriba, t: "?", clase: "frac-dir hasta3" });
+  texto(g, { x: c[2], y: arriba, t: con(y, ub), clase: "frac-dir fuerte ver3" });
+  // Lo que se conoce de la situación final, recuadrado en el paso 1.
+  svg("rect", { x: c[2] - 62, y: abajo - 26, width: 124, height: 36, rx: 8, class: "resalte ver1 hasta2" }, g);
+  // Dos flechas curvas, por encima de los numeradores y por debajo de los denominadores.
+  const flechas = (de, a_, op, clase) => {
+    const grupo = svg("g", { class: clase }, g), x1 = de + med, x2 = a_ - med, xm = (de + a_) / 2;
+    svg("path", { d: `M ${x1} 52 Q ${xm} 6 ${x2} 52`, class: "flecha", "marker-end": "url(#punta-directa)" }, grupo);
+    svg("path", { d: `M ${x1} 134 Q ${xm} 180 ${x2} 134`, class: "flecha", "marker-end": "url(#punta-directa)" }, grupo);
+    texto(grupo, { x: xm, y: 20, t: op, clase: "op-flecha" });
+    texto(grupo, { x: xm, y: 182, t: op, clase: "op-flecha" });
+  };
+  if (a !== 1) flechas(c[0], c[1], `: ${num(a)}`, "ver2");
+  if (x !== 1) flechas(c[1], c[2], `· ${num(x)}`, "ver3");
+}
+
 function dibujarDirecta(r) {
   const { a, b, x, ua, ub, k, y } = r;
-  const g = Pasos.lienzo(230);
-  const R = Pasos.rectaDoble(g, { y: 70, max: Math.max(a, x) * 1.12, formato: v => con(v, ua) });
-  R.marca(0, con(0, ub));
-  R.marca(a, con(b, ub));
-  if (a !== 1) R.marca(1, con(k, ub), "ver1");
-  R.marca(x, con(y, ub), "ver2", true);
+  const g = Pasos.lienzo(410);
+  fraccionesDirecta(g, r);
+  // Como en las fracciones: arriba lo que se busca, abajo lo que se conoce.
+  const R = Pasos.rectaDoble(g, { y: 262, max: Math.max(a, x) * 1.12, formato: v => con(v, ua) });
+  const marca = (v, w, clase = "", fuerte = false) => R.marca(v, con(v, ua), clase, fuerte, { etiqueta: con(w, ub) });
+  marca(0, 0);
+  marca(a, b);
+  if (a !== 1) marca(1, k, "ver2");
+  marca(x, y, "ver3", true);
+  const uno = con(1, ua), otra = con(1, ub);
   return [
-    ["Lo que sabemos", `<p>${con(a, ua)} → ${con(b, ub)}. Arriba, ${ua || "la primera magnitud"}; abajo, ${ub || "la segunda"}. Si una se duplica, la otra también: es <b>proporcionalidad directa</b>.</p>`],
-    ["Reducción a la unidad", `<p>Dividimos las dos entre ${num(a)}: a 1${ua ? " " + singular(ua) : ""} le corresponde ${num(b)} : ${num(a)} = <b>${con(k, ub)}</b>.</p>`],
-    [`Para ${con(x, ua)}`, `<p>Multiplicamos las dos por ${num(x)}: ${num(x)} · ${num(k)} = <b>${con(y, ub)}</b>.</p>`],
-    ["La constante", `<p>En toda la recta, abajo es <b>${num(k)} veces</b> arriba: es la constante de proporcionalidad. ${con(x, ua)} → ${num(x)} · ${num(k)} = ${con(y, ub)}.</p>
+    ["Lo que sabemos", `<p>${con(a, ua)} → ${con(b, ub)}. Si una se duplica, la otra también: es <b>proporcionalidad directa</b>.</p>
+      <p>Escribimos los datos como una fracción, ${Pasos.frac(con(b, ub), con(a, ua))}, y al final lo que queremos saber, ${Pasos.frac("?", con(x, ua))}. En medio, una fracción vacía: ahí pasaremos por la unidad.</p>`],
+    ["¿A qué unidad?", `<p>Queremos reducir a la unidad, pero ¿a cuál: a ${uno} o a ${otra}? De la situación final conocemos ${ua ? `los ${ua}` : "la primera magnitud"} (${con(x, ua)}), así que en la fracción del medio ponemos <b>${uno}</b>.</p>
+      <p>Ya sabemos los pasos: de ${con(a, ua)} a ${uno} y de ${uno} a ${con(x, ua)}.</p>`],
+    a === 1
+      ? ["Reducción a la unidad", `<p>Los datos ya son de ${uno}: no hay que dividir. A ${uno} le corresponde <b>${con(k, ub)}</b>.</p>`]
+      : [`Dividimos entre ${num(a)}`, `<p>Para pasar de ${con(a, ua)} a ${uno}, dividimos entre ${num(a)}. Lo que hacemos abajo, lo hacemos arriba: ${num(b)} : ${num(a)} = <b>${con(k, ub)}</b>.</p>`],
+    [`Multiplicamos por ${num(x)}`, `<p>De ${uno} a ${con(x, ua)}, multiplicamos por ${num(x)}, abajo y arriba: ${num(k)} · ${num(x)} = <b>${con(y, ub)}</b>.</p>`],
+    ["La constante", `<p>En toda la recta, arriba es <b>${num(k)} veces</b> abajo: es la constante de proporcionalidad, el número de la fracción del medio. ${con(x, ua)} → ${num(x)} · ${num(k)} = ${con(y, ub)}.</p>
       <p>Comprobación: ${num(b)} : ${num(a)} = ${num(y)} : ${num(x)} = ${num(k)}.</p>`],
   ];
 }
