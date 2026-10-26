@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decimales paso a paso</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .caja { fill: #fff; stroke: var(--tinta); stroke-width: 1.5; }
+  .caja.objetivo { fill: #dbe8f1; stroke: var(--acento); stroke-width: 3; }
+  .cifra { font-size: 30px; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .cifra.relleno { fill: var(--rojo); font-weight: 700; }
+  .coma { font-size: 40px; text-anchor: middle; font-weight: 700; fill: var(--tinta); }
+  .cabecera { font-size: 16px; text-anchor: middle; fill: var(--suave); font-weight: 700; }
+  .eje { stroke: var(--tinta); stroke-width: 2.5; }
+  .muesca { stroke: var(--tinta); stroke-width: 2; }
+  .muesca.menor { stroke-width: 1; }
+  .muesca.mitad { stroke: var(--acento); stroke-width: 3; }
+  .etq { font-size: 18px; text-anchor: middle; fill: var(--tinta); }
+  .etq.mitad { fill: var(--acento); font-weight: 700; }
+  .etq.elegido { font-weight: 700; fill: var(--acento); font-size: 22px; }
+  .punto-a { fill: var(--azul); stroke: var(--tinta); stroke-width: 1.5; }
+  .punto-b { fill: var(--naranja); stroke: var(--tinta); stroke-width: 1.5; }
+  .nombre { font-size: 18px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  .grande { font-size: 32px; text-anchor: middle; fill: var(--acento); font-weight: 700; }
+  .decide { fill: none; stroke: var(--rojo); stroke-width: 4; rx: 6; }
+  .escaner { fill: var(--naranja); stroke: #d68910; stroke-width: 2; opacity: 0; }
+  .s2 .escaner.ver2 { opacity: .4; }
+  .borra { transition: opacity var(--t); }
+  .s4 .borra { opacity: .25; }
+  /* Movimientos: los ceros caen en su sitio, el escáner recorre las columnas
+     de izquierda a derecha, los puntos se deslizan por la recta y, al
+     redondear, el punto viaja hasta el número más cercano. */
+  .cae { transform: translateY(-34px); transition: opacity var(--t), transform var(--t) ease-out; }
+  .s1 .cae { transform: none; }
+  .escaner { transform: translateX(var(--dx0)); transition: opacity var(--t), transform 1.6s ease-in-out .5s; }
+  .s2 .escaner { transform: none; }
+  .desliza { transform: translateX(var(--dx0)); transition: opacity var(--t), transform 1.2s ease-out .3s; }
+  .s3 .desliza { transform: none; }
+  .viaja { transition: opacity var(--t), transform 1.4s ease-in-out .4s; }
+  .s4 .viaja { transform: translateX(var(--dx)); }
+  @media (prefers-reduced-motion: reduce) { .cae, .escaner, .desliza, .viaja { transition: none; } }
+</style>
+<link rel="stylesheet" href="../herramientas.css">
+<script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
+</head>
+<body>
+<header>
+  <h1>Decimales paso a paso</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Tipo de ejercicio">
+  <button type="button" role="tab" data-modo="comparar">¿Cuál es mayor?</button>
+  <button type="button" role="tab" data-modo="redondeo">Redondear</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="comparar"><input id="ca" type="text" inputmode="decimal" size="8" aria-label="Primer número"> y <input id="cb" type="text" inputmode="decimal" size="8" aria-label="Segundo número"></span>
+  <span data-para="redondeo">redondear <input id="rx" type="text" inputmode="decimal" size="9" aria-label="Número"> a
+    <select id="rt" aria-label="A qué redondear"><option value="0">las unidades</option><option value="1">las décimas</option><option value="2">las centésimas</option></select></span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Los números se escriben con coma decimal (0,67).</p>
+
+<script src="pasos.js"></script>
+<script src="decimales.js"></script>
+<script>
+"use strict";
+const { svg, texto } = Pasos;
+const { LUGARES, ENTEROS, fijo } = Decimales;
+const W = 64, H = 56;
+const caja = (g, x, y, t, clase = "", claseCifra = "") => {
+  svg("rect", { x, y, width: W, height: H, class: "caja " + clase }, g);
+  texto(g, { x: x + W / 2, y: y + H / 2, t, clase: "cifra " + claseCifra });
+};
+
+// --------------------------------------------------------------- comparar
+function dibujarComparar(r) {
+  const { A, B, p, da, db, va, vb, donde, mayor, textoA, textoB, anchoA, anchoB } = r;
+  const recta = donde !== "entera";
+  const g = Pasos.lienzo(recta ? 390 : 230);
+  const nI = Math.max(A.ent.length, B.ent.length), hueco = 22, ancho = (nI + p) * W + hueco, x0 = 400 - ancho / 2;
+  const xCol = c => c < nI ? x0 + c * W : x0 + c * W + hueco;      // columnas: nI enteras y p decimales
+  const ys = [56, 56 + H + 14];
+  for (let c = 0; c < nI + p; c++)
+    texto(g, { x: xCol(c) + W / 2, y: 40, t: c < nI ? ENTEROS[nI - 1 - c] : LUGARES[c - nI][0], clase: "cabecera" });
+  // Columna en la que se para el escáner.
+  const eA = A.ent.padStart(nI, " "), eB = B.ent.padStart(nI, " ");
+  let col;
+  if (donde === "entera") { col = 0; while (col < nI - 1 && (eA[col] === eB[col])) col++; }
+  else col = mayor === "igual" ? nI + p - 1 : nI + donde;
+  [[A, da, ys[0]], [B, db, ys[1]]].forEach(([N, d, y]) => {
+    [...N.ent].forEach((cf, k) => caja(g, xCol(nI - N.ent.length + k), y, cf));
+    texto(g, { x: x0 + nI * W + hueco / 2, y: y + H - 6, t: ",", clase: "coma" });
+    [...d].forEach((cf, k) => {
+      const nuevo = k >= N.dec.length;
+      const gr = nuevo ? svg("g", { class: "cae ver1" }, g) : g;
+      caja(gr, xCol(nI + k), y, cf, "", nuevo ? "relleno" : "");
+    });
+  });
+  // El escáner, encima y transparente: de la primera columna a la que decide.
+  const esc = svg("rect", { x: xCol(col) - 4, y: ys[0] - 6, width: W + 8, height: 2 * H + 26, rx: 8, class: "escaner ver2" }, g);
+  esc.setAttribute("style", `--dx0: ${xCol(0) - xCol(col)}px`);
+  const pasos = [
+    ["Los dos números", `<p>Colocamos ${textoA} y ${textoB} con la <b>coma debajo de la coma</b>: así cada cifra queda en su columna (U = unidades, d = décimas, c = centésimas, m = milésimas).</p>`],
+    ["Igualamos las cifras", anchoA !== textoA || anchoB !== textoB
+      ? `<p>Añadimos <b>ceros a la derecha</b> (en rojo) para que los dos tengan ${p} ${p === 1 ? "cifra decimal" : "cifras decimales"}: ${anchoA !== textoA ? `${textoA} = ${anchoA}` : `${textoB} = ${anchoB}`}. Un cero al final de los decimales no cambia el valor.</p>`
+      : `<p>Los dos tienen ya las mismas cifras decimales: no hace falta añadir ceros.</p>`],
+    ["Cifra a cifra", donde === "entera"
+      ? `<p>Miramos de izquierda a derecha. La <b>parte entera</b> ya es distinta: ${Number(A.ent)} y ${Number(B.ent)}. Con eso basta: los decimales no pueden cambiarlo.</p>`
+      : mayor === "igual" ? `<p>Miramos de izquierda a derecha: <b>todas las cifras coinciden</b>.</p>`
+      : `<p>Miramos de izquierda a derecha hasta la <b>primera cifra distinta</b>: está en las ${LUGARES[donde]}, ${da[donde]} y ${db[donde]}.</p>`],
+  ];
+  if (recta) {
+    // Recta con las marcas de la columna que decide (s) y sus divisiones.
+    const i = mayor === "igual" ? p - 1 : donde, s = 10 ** (p - 1 - i), y = 290;
+    const lo = Math.floor(Math.min(va, vb) / s) * s, hi = (Math.floor(Math.max(va, vb) / s) + 1) * s;
+    const X = v => 70 + 660 * (v - lo) / (hi - lo), gr = svg("g", { class: "ver3" }, g);
+    svg("line", { x1: 50, y1: y, x2: 750, y2: y, class: "eje" }, gr);
+    const fino = s >= 10 ? s / 10 : s;
+    for (let v = lo; v <= hi; v += fino) {
+      const mayorM = (v - lo) % s === 0;
+      svg("line", { x1: X(v), y1: y - (mayorM ? 10 : 5), x2: X(v), y2: y + (mayorM ? 10 : 5), class: "muesca" + (mayorM ? "" : " menor") }, gr);
+      if (mayorM) texto(gr, { x: X(v), y: y + 34, t: fijo(v / s, i + 1), clase: "etq" });
+    }
+    [[va, textoA, "punto-a", -22], [vb, textoB, "punto-b", mayor === "igual" ? -48 : -22]].forEach(([v, t, clase, dy]) => {
+      const m = svg("g", { class: "desliza ver3" }, g);
+      m.setAttribute("style", `--dx0: ${X(lo) - X(v)}px`);
+      svg("circle", { cx: X(v), cy: y, r: 10, class: clase }, m);
+      texto(m, { x: X(v), y: y + dy, t, clase: "nombre" });
+    });
+    pasos.push(["En la recta", `<p>En la recta, cuanto más a la derecha, mayor. Cada marca grande es una ${LUGARES[i].slice(0, -1)}; las pequeñas, ${i + 1 < 3 ? LUGARES[i + 1] : "partes más pequeñas"}.</p>`]);
+  }
+  const [M, m, vM, vm] = mayor === "b" ? [textoB, textoA, vb, va] : [textoA, textoB, va, vb];
+  const largo = A.dec.length !== B.dec.length && mayor !== "igual" && (mayor === "a" ? A.dec.length < B.dec.length : B.dec.length < A.dec.length);
+  pasos.push(["Resultado", mayor === "igual"
+    ? `<p><b>${textoA} = ${textoB}</b>: valen lo mismo, aunque uno se escriba con más ceros.</p>`
+    : `<p><b>${M} > ${m}</b>.</p>${largo ? `<p>${m} tiene más cifras, pero eso no lo hace mayor: son ${vm} ${r.lugar} frente a ${vM} ${r.lugar}.</p>` : ""}`]);
+  const ultimo = svg("text", { x: 400, y: recta ? 380 : 220, class: `grande ver${pasos.length - 1}` }, g);
+  ultimo.textContent = mayor === "igual" ? `${textoA} = ${textoB}` : `${M} > ${m}`;
+  return pasos;
+}
+
+// --------------------------------------------------------------- redondear
+function dibujarRedondeo(r) {
+  const { X: N, t, p, n, q, T, R, cifra, sube, mitadJusta, original, bajo, alto, mitad, res, lugar, lugarCifra } = r;
+  const g = Pasos.lienzo(330), hueco = 22, nI = N.ent.length, ancho = (nI + p) * W + hueco, x0 = 400 - ancho / 2, y0 = 40;
+  const xCol = c => c < nI ? x0 + c * W : x0 + c * W + hueco;
+  const objetivo = nI - 1 + t;                                    // última columna que se queda
+  for (let c = 0; c < nI + p; c++) {
+    texto(g, { x: xCol(c) + W / 2, y: y0 - 12, t: c < nI ? (ENTEROS[nI - 1 - c] || "") : LUGARES[c - nI][0], clase: "cabecera" });
+    const cf = c < nI ? N.ent[c] : N.dec[c - nI];
+    caja(c > objetivo ? svg("g", { class: "borra" }, g) : g, xCol(c), y0, cf, c === objetivo ? "objetivo" : "");
+  }
+  texto(g, { x: x0 + nI * W + hueco / 2, y: y0 + H - 6, t: ",", clase: "coma" });
+  svg("rect", { x: xCol(objetivo + 1) - 4, y: y0 - 4, width: W + 8, height: H + 8, rx: 8, class: "decide ver3" }, g);
+  const fin = svg("text", { x: 400, y: y0 + H + 52, class: "grande ver4" }, g);
+  fin.textContent = `${original} ≈ ${res}`;
+  // Recta de bajo a alto con diez divisiones y la mitad marcada.
+  const y = 250, Xr = f => 90 + 620 * f, f = (n / q) - T;
+  svg("line", { x1: 60, y1: y, x2: 740, y2: y, class: "eje ver1" }, g);
+  for (let k = 0; k <= 10; k++) {
+    const extremo = k === 0 || k === 10;
+    svg("line", { x1: Xr(k / 10), y1: y - (extremo ? 12 : 6), x2: Xr(k / 10), y2: y + (extremo ? 12 : 6), class: "muesca ver1" + (extremo ? "" : " menor") }, g);
+  }
+  texto(g, { x: Xr(0), y: y + 40, t: bajo, clase: "etq ver1" + (sube ? "" : " hasta4") });
+  texto(g, { x: Xr(1), y: y + 40, t: alto, clase: "etq ver1" + (sube ? " hasta4" : "") });
+  texto(g, { x: Xr(sube ? 1 : 0), y: y + 40, t: sube ? alto : bajo, clase: "etq elegido ver4" });
+  svg("line", { x1: Xr(.5), y1: y - 16, x2: Xr(.5), y2: y + 16, class: "muesca mitad ver2" }, g);
+  texto(g, { x: Xr(.5), y: y + 40, t: mitad, clase: "etq mitad ver2" });
+  svg("circle", { cx: Xr(f), cy: y, r: 10, class: "punto-b ver1" }, g);
+  texto(g, { x: Math.min(Math.max(Xr(f), 90), 710), y: y - 24, t: original, clase: "nombre ver1" });
+  const viaje = svg("circle", { cx: Xr(f), cy: y, r: 10, class: "punto-a viaja ver4" }, g);
+  viaje.setAttribute("style", `--dx: ${Xr(sube ? 1 : 0) - Xr(f)}px`);
+  const cuantas = t === 0 ? "sin cifras decimales" : `con ${t === 1 ? "una cifra decimal" : "dos cifras decimales"}`;
+  return [
+    ["El número", `<p>Redondear ${original} a ${lugar} es quedarse ${cuantas}. La casilla marcada es la última que se queda.</p>`],
+    ["¿Entre qué dos números está?", `<p>${original} está entre <b>${bajo}</b> y <b>${alto}</b>. El redondeo es uno de los dos: el que esté <b>más cerca</b>.</p>`],
+    ["La mitad", `<p>Justo en medio está <b>${mitad}</b>. ${original} está ${mitadJusta ? "justo en la mitad" : sube ? `pasada la mitad: más cerca de ${alto}` : `antes de la mitad: más cerca de ${bajo}`}.</p>`],
+    ["La cifra que decide", `<p>Sin dibujar la recta, basta con mirar la cifra de detrás, la de las ${lugarCifra}: es un <b>${cifra}</b>. ${cifra >= 5 ? "Es 5 o más: la cifra marcada <b>sube uno</b>." : "Es menos de 5: la cifra marcada <b>se queda igual</b>."}${mitadJusta ? " Justo en la mitad, se redondea hacia arriba." : ""}</p>`],
+    ["Redondeamos", `<p><b>${original} ≈ ${res}</b>. Las cifras de detrás se quitan.${t > 0 && res.endsWith("0") ? ` El cero final de ${res} se escribe: dice que has redondeado a ${lugar}.` : ""}</p>`],
+  ];
+}
+
+const MODOS = {
+  comparar: { campos: { a: "ca", b: "cb" }, dibujar: dibujarComparar },
+  redondeo: { campos: { x: "rx", t: "rt" }, dibujar: dibujarRedondeo },
+};
+for (const [m, def] of Object.entries(MODOS))
+  Object.assign(def, { calcular: Decimales.calcular[m], ejemplos: Decimales.EJEMPLOS[m], azar: () => Decimales.azar(m) });
+const elegirModo = Pasos.montar(MODOS, "comparar");
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sumar y restar fracciones con el mcm</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .num { font-size: 30px; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .num.nuevo { fill: var(--acento); font-weight: 700; }
+  .signo { font-size: 30px; text-anchor: middle; dominant-baseline: central; fill: var(--suave); }
+  .barra { stroke: var(--tinta); stroke-width: 2.5; }
+  .hueco { fill: none; stroke: var(--suave); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .rotulo { font-size: 20px; fill: var(--suave); font-weight: 700; dominant-baseline: central; }
+  .item { font-size: 24px; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .s3 .item.esmcm { fill: var(--rojo); font-weight: 700; }
+  .mcm { font-size: 22px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
+  .flecha { fill: none; stroke: var(--acento); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .k { font-size: 22px; text-anchor: middle; dominant-baseline: central; fill: var(--acento); font-weight: 700; }
+  /* Los múltiplos aparecen uno detrás de otro, como al escribirlos a mano. */
+  /* La casilla vacía se va cuando llega su número. */
+  .hueco { transition: opacity var(--t); }
+  .s6 .quita6, .s9 .quita9 { opacity: 0; }
+  .lista .item { transition-delay: calc(var(--i) * 160ms); }
+  /* El mcm, además, cambia de color sin esperar (y aparece en su turno, no antes). */
+  .lista .item.esmcm { transition: opacity var(--t) calc(var(--i) * 160ms), fill var(--t) 0s; }
+  @media (prefers-reduced-motion: reduce) { .lista .item, .lista .item.esmcm { transition-delay: 0s; } }
+</style>
+<link rel="stylesheet" href="../herramientas.css">
+<script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
+</head>
+<body>
+<header>
+  <h1>Sumar y restar fracciones con el mcm</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="suma">
+    <input id="sa" type="number" class="corto" min="1" aria-label="Numerador de la primera fracción"> /
+    <input id="sb" type="number" class="corto" min="2" max="20" aria-label="Denominador de la primera fracción">
+    <select id="sop" aria-label="Operación"><option value="+">+</option><option value="-">−</option></select>
+    <input id="sc" type="number" class="corto" min="1" aria-label="Numerador de la segunda fracción"> /
+    <input id="sd" type="number" class="corto" min="2" max="20" aria-label="Denominador de la segunda fracción">
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado.</p>
+
+<script src="pasos.js"></script>
+<script src="fracmcm.js"></script>
+<script>
+"use strict";
+const { svg, texto } = Pasos;
+const SIG = op => op === "+" ? "+" : "−";
+
+// Fracción en (x, y): numerador encima de la raya y denominador debajo.
+// `hueco`: casilla discontinua en el numerador; los números, con su propia clase (verK…).
+function fraccion(g, { x, y, n, d, ancho = 52, clase = "", claseNum = "", hueco = false, claseHueco = "" }) {
+  const gr = svg("g", { class: clase }, g);
+  if (hueco) svg("rect", { x: x - 28, y: y - 46, width: 56, height: 38, rx: 4, class: "hueco " + claseHueco }, gr);
+  svg("line", { x1: x - ancho / 2, y1: y, x2: x + ancho / 2, y2: y, class: "barra" }, gr);
+  if (n !== null) texto(gr, { x, y: y - 27, t: n, clase: "num " + claseNum });
+  if (d !== null) texto(gr, { x, y: y + 27, t: d, clase: "num " + claseNum });
+  return gr;
+}
+
+// Flecha curva de (x1, y) a (x2, y), por encima (s = −1) o por debajo (s = 1), con «· k».
+function flecha(g, { x1, x2, y, s, k, clase }) {
+  const gr = svg("g", { class: clase }, g), cy = y + s * 46, mx = (x1 + x2) / 2;
+  svg("path", { d: `M ${x1} ${y} Q ${mx} ${cy} ${x2} ${y}`, class: "flecha" }, gr);
+  const dx = x2 - mx, dy = y - cy, l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, L = 12, w = 6;
+  svg("path", { d: `M ${x2 - L * ux - w * uy} ${y - L * uy + w * ux} L ${x2} ${y} L ${x2 - L * ux + w * uy} ${y - L * uy - w * ux}`, class: "flecha" }, gr);
+  texto(gr, { x: mx, y: y + s * 40, t: `· ${k}`, clase: "k" });
+}
+
+function dibujar(r) {
+  const { a, b, op, c, d, m, k1, k2, A, B, R, simple, g: gcd, mb, md } = r;
+  const g = Pasos.lienzo(560);
+  // La operación
+  fraccion(g, { x: 340, y: 60, n: a, d: b });
+  texto(g, { x: 400, y: 60, t: SIG(op), clase: "signo" });
+  fraccion(g, { x: 460, y: 60, n: c, d: d });
+  // Las dos listas de múltiplos, que se van escribiendo una a una: hasta el
+  // mcm, dos más y puntos suspensivos, como se haría a mano sin saber dónde parar.
+  const largo = Math.max(mb.length, md.length) + 3, paso = Math.min(52, 510 / largo), X = i => 260 + i * paso;
+  for (const [den, lista, y, ver] of [[b, mb, 160, "ver1"], [d, md, 215, "ver2"]]) {
+    const gr = svg("g", { class: "lista" }, g), todos = [...lista, lista.length * den + den, lista.length * den + 2 * den, "…"];
+    texto(gr, { x: 40, y, t: `Múltiplos de ${den}:`, clase: "rotulo " + ver, ancla: "start" });
+    todos.forEach((v, i) => texto(gr, { x: X(i), y, t: v, clase: `item ${ver}${v === m ? " esmcm" : ""}` }).setAttribute("style", `--i: ${i}`));
+  }
+  texto(g, { x: 400, y: 262, t: `mcm(${b}, ${d}) = ${m}`, clase: "mcm ver3" });
+  // Cada fracción, igual a otra con denominador m: primero el denominador,
+  // después la flecha de abajo y, al final, la de arriba con el numerador.
+  const yc = 370;
+  for (const [x1, x2, n, dd, k, N, v] of [[110, 290, a, b, k1, A, 4], [510, 690, c, d, k2, B, 7]]) {
+    fraccion(g, { x: x1, y: yc, n, d: dd, clase: `ver${v}` });
+    texto(g, { x: (x1 + x2) / 2, y: yc, t: "=", clase: `signo ver${v}` });
+    fraccion(g, { x: x2, y: yc, n: null, d: m, hueco: true, claseHueco: `quita${v + 2}`, claseNum: "nuevo", clase: `ver${v}` });
+    flecha(g, { x1: x1 + 30, x2: x2 - 34, y: yc + 27, s: 1, k, clase: `ver${v + 1}` });
+    flecha(g, { x1: x1 + 30, x2: x2 - 34, y: yc - 27, s: -1, k, clase: `ver${v + 2}` });
+    fraccion(g, { x: x2, y: yc, n: N, d: null, ancho: 0, claseNum: "nuevo", clase: `ver${v + 2}` });
+  }
+  // Reescritas con el mismo denominador, y la operación
+  const yf = 500;
+  fraccion(g, { x: 120, y: yf, n: A, d: m, clase: "ver10" });
+  texto(g, { x: 180, y: yf, t: SIG(op), clase: "signo ver10" });
+  fraccion(g, { x: 240, y: yf, n: B, d: m, clase: "ver10" });
+  texto(g, { x: 305, y: yf, t: "=", clase: "signo ver11" });
+  fraccion(g, { x: 390, y: yf, n: `${A} ${SIG(op)} ${B}`, d: m, ancho: 110, clase: "ver11" });
+  texto(g, { x: 475, y: yf, t: "=", clase: "signo ver11" });
+  fraccion(g, { x: 540, y: yf, n: R, d: m, claseNum: "nuevo", clase: "ver11" });
+  if (gcd > 1 && R > 0) {
+    texto(g, { x: 605, y: yf, t: "=", clase: "signo ver11" });
+    fraccion(g, { x: 670, y: yf, n: simple[0], d: simple[1], claseNum: "nuevo", clase: "ver11" });
+  }
+  const pareja = (n, dd, k, N) => [
+    [`${n}/${dd} con denominador ${m}`, `<p>Buscamos una fracción <b>igual</b> a ${Pasos.frac(n, dd)} con denominador ${m}: ${Pasos.frac(n, dd)} = ${Pasos.frac("?", m)}.</p>`],
+    ["Abajo: ¿por cuánto?", `<p>¿Por cuánto multiplico ${dd} para llegar a ${m}? ${m} : ${dd} = <b>${k}</b>.</p>`],
+    ["Arriba, lo mismo", `<p>Para que las dos fracciones sean iguales, arriba se multiplica por lo mismo: ${n} · ${k} = <b>${N}</b>.</p><p>${Pasos.frac(n, dd)} = ${Pasos.frac(N, m)}: es la misma cantidad, en trozos más pequeños.</p>`],
+  ];
+  return [
+    ["La operación", `<p>Para ${op === "+" ? "sumar" : "restar"} fracciones, las dos tienen que tener el <b>mismo denominador</b>. ${b} y ${d} son distintos: buscamos uno común.</p>`],
+    [`Múltiplos de ${b}`, `<p>Escribimos los múltiplos de ${b}: ${b} · 1, ${b} · 2, ${b} · 3…</p>`],
+    [`Múltiplos de ${d}`, `<p>Y los de ${d}, hasta que aparezca uno que ya está en la otra lista.</p>`],
+    ["El primero que se repite", `<p><b>${m}</b> es el primero que está en las dos listas: es el <b>mínimo común múltiplo</b>, mcm(${b}, ${d}) = ${m}. Será el denominador común.</p>`],
+    ...pareja(a, b, k1, A),
+    ...pareja(c, d, k2, B),
+    ["Mismo denominador", `<p>Reescribimos la operación: ${Pasos.frac(A, m)} ${SIG(op)} ${Pasos.frac(B, m)}. Ahora los trozos son del mismo tamaño.</p>`],
+    ["Operamos", `<p>${op === "+" ? "Sumamos" : "Restamos"} los numeradores y <b>el denominador se queda igual</b>: ${A} ${SIG(op)} ${B} = ${R}.</p>${gcd > 1 && R > 0 ? `<p>Se puede simplificar dividiendo arriba y abajo entre ${gcd}: ${Pasos.frac(simple[0], simple[1])}.</p>` : ""}`],
+  ];
+}
+
+const MODOS = { suma: { campos: { a: "sa", b: "sb", op: "sop", c: "sc", d: "sd" }, dibujar } };
+Object.assign(MODOS.suma, { calcular: FracMcm.calcular.suma, ejemplos: FracMcm.EJEMPLOS.suma, azar: () => FracMcm.azar("suma") });
+const elegirModo = Pasos.montar(MODOS, "suma");
+</script>
+</body>
+</html>

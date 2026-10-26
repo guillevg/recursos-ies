@@ -118,12 +118,15 @@ input.casilla.bien { border-color: var(--ok); }
 
 /* SVG: celdas, cortes y rótulos */
 .c-azul { fill: var(--azul); } .c-naranja { fill: var(--naranja); } .c-blanco { fill: var(--celda); }
+.t-azul { fill: #2f6f9f; } .t-naranja { fill: #b9690e; }   /* rótulos de los colores de arriba, más oscuros para leerse */
 .c-quitado { fill: var(--azul); opacity: .35; }
 .borde { fill: none; stroke: var(--fg); stroke-width: 2.4; }
 .corte { stroke: var(--fg); stroke-width: 1.5; }
 .corte-nuevo { stroke: var(--fg); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: .75; }
 .tachon { stroke: var(--bad); stroke-width: 2; }
 .llave { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.flecha { fill: none; stroke: var(--accent); stroke-width: 2.4; }
+.flecha-punta { fill: var(--accent); }
 .t-llave { fill: var(--fg); font: 700 19px var(--font); text-anchor: middle; }
 .t-seg { fill: var(--fg); font: 700 17px var(--font); text-anchor: middle; }
 .t-seg.sobre { fill: var(--tinta-celda); }
@@ -156,6 +159,11 @@ input.casilla.bien { border-color: var(--ok); }
 .campo { display: flex; flex-direction: column; gap: .25rem; }
 .campo label { font-size: .88rem; color: var(--muted); }
 .campo input.casilla { width: 9rem; }
+/* Un campo por línea: etiqueta a la izquierda y casilla a la derecha, alineadas. */
+.campos.lineas { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; gap: .7rem .8rem; margin-bottom: 1.1rem; }
+.campos.lineas .campo { display: contents; }
+.campos.lineas .campo label { font-size: 1rem; color: var(--fg); text-align: right; }
+.campos.lineas .campo input.casilla { width: 5rem; text-align: center; }
 /* Notación científica: el exponente, pequeño y arriba, pegado al 10 */
 .potencia { display: flex; align-items: flex-end; gap: .4rem; padding-top: 1rem; }
 .potencia .x { padding-bottom: .5rem; font-weight: 600; font-size: 1.15em; }
@@ -172,6 +180,8 @@ input.casilla.bien { border-color: var(--ok); }
 /* Avisos: corrección, pista y operaciones */
 .aviso { margin-top: 1.2rem; padding: .8rem 1.1rem; border-radius: 14px; background: var(--surface); border: 2px solid; }
 .aviso p { margin: .2rem 0; }
+.aviso ul { margin: .2rem 0; padding-left: 1.2rem; }
+.aviso li + li { margin-top: .35rem; }
 .aviso.bien { border-color: var(--ok); color: var(--ok); }
 .aviso.mal { border-color: var(--bad); color: var(--bad); }
 .aviso.pista { border-color: var(--accent-soft); color: var(--fg); }
@@ -206,3 +216,7 @@ input.casilla.bien { border-color: var(--ok); }
 .tabla-valores { border-collapse: collapse; margin: 0.8rem auto 0; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .tabla-valores th, .tabla-valores td { border: 1px solid var(--line); padding: 0.35rem 0.8rem; text-align: center; background: var(--surface); }
 .tabla-valores th { font-weight: 700; background: var(--accent-soft); text-align: right; }
+
+/* Tabla de valor posicional (comparar decimales): los ceros añadidos, destacados */
+.posicional td { min-width: 2.2rem; }
+.posicional td.relleno { color: var(--accent); font-weight: 800; }

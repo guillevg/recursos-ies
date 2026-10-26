@@ -132,7 +132,7 @@ function actividad(c, t, def, claveAct) {
         enlace = `<p><a href="${href}" target="_blank" rel="noopener">Ver este ejercicio paso a paso</a></p>`;
       }
       $("#b-pista").setAttribute("aria-pressed", "true");
-      $("#salida").insertAdjacentHTML("afterbegin", `<div class="aviso pista" id="pista"><p>${A.pista}</p>${enlace}</div>`);
+      $("#salida").insertAdjacentHTML("afterbegin", `<div class="aviso pista" id="pista">${A.pista.startsWith("<") ? A.pista : `<p>${A.pista}</p>`}${enlace}</div>`);
       $("#pista a")?.addEventListener("click", ev => { ev.preventDefault(); ventana(ev.currentTarget.href, A.herramienta[0]); });
     });
     $("#b-otro").addEventListener("click", () => { if (!resuelto) progreso.set(k, 0); ej = A.nuevo(variante); pintar(); });
