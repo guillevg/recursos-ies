@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cambio de unidades paso a paso</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  /* Escalera */
+  .peldano { fill: var(--fondo-alt); stroke: var(--tinta); stroke-width: 1.5; }
+  .peldano.origen { fill: var(--azul); }
+  .peldano.destino { fill: var(--naranja); }
+  .unidad { font-size: 22px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  .vol { font-size: 17px; text-anchor: middle; fill: var(--acento); font-weight: 700; }
+  .vol-caja { fill: #fff; stroke: var(--acento); stroke-width: 1.5; }
+  .vol-caja.origen { fill: var(--azul); }
+  .vol-caja.destino { fill: var(--naranja); }
+  .flecha { fill: none; stroke: var(--rojo); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .flecha-txt { font-size: 16px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
+  /* Cifras y coma (como en notacion.html) */
+  .caja { fill: #fff; stroke: var(--tinta); stroke-width: 1.5; }
+  .caja.cero { fill: #e3e8ec; }
+  .cifra { font-size: 28px; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .cifra.cero { fill: var(--suave); }
+  .coma { font-size: 40px; text-anchor: middle; font-weight: 700; fill: var(--suave); }
+  .coma.nueva { fill: var(--rojo); }
+  .salto { fill: none; stroke: var(--acento); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .salto-txt { font-size: 15px; text-anchor: middle; fill: var(--acento); font-weight: 700; }
+  .grande { font-size: 30px; text-anchor: middle; fill: var(--tinta); font-weight: 700; }
+  /* Línea, cuadrado y cubo */
+  .borde { fill: none; stroke: var(--tinta); stroke-width: 2.5; }
+  .rejilla { stroke: var(--tinta); stroke-width: 0.8; opacity: 0.55; }
+  .cara { fill: #fff; stroke: var(--tinta); stroke-width: 2; }
+  .cara.arriba { fill: var(--fondo-alt); }
+  .cara.lado { fill: #e3e8ec; }
+  .capa { fill: var(--azul); stroke: none; }
+  .lleno { fill: var(--naranja); stroke: none; opacity: 0.55; }
+  .rotulo { font-size: 19px; text-anchor: middle; fill: var(--tinta); }
+  .rotulo.fuerte { font-weight: 700; font-size: 21px; }
+  .veces { font-size: 22px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
+  .muesca { stroke: var(--tinta); stroke-width: 2; }
+</style>
+<link rel="stylesheet" href="../herramientas.css">
+<script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
+</head>
+<body>
+<header>
+  <h1>Cambio de unidades paso a paso</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Tipo de ejercicio">
+  <button type="button" role="tab" data-modo="porque">¿Por qué 10, 100 y 1000?</button>
+  <button type="button" role="tab" data-modo="cambiar">Cambiar de unidad</button>
+  <button type="button" role="tab" data-modo="litros">Volumen y litros</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="porque">
+    <select id="pp" aria-label="Unidad y la siguiente">
+      <option value="m-dm">1 m y 1 dm</option><option value="dm-cm">1 dm y 1 cm</option><option value="cm-mm">1 cm y 1 mm</option>
+    </select>
+  </span>
+  <span data-para="cambiar">
+    <input id="cn" type="text" inputmode="decimal" size="9" aria-label="Número">
+    <select id="cd" aria-label="Unidad de partida"></select>
+    a <select id="ch" aria-label="Unidad a la que se pasa"></select>
+  </span>
+  <span data-para="litros">
+    <input id="ln" type="text" inputmode="decimal" size="9" aria-label="Número">
+    <select id="ld" aria-label="Unidad de partida"></select>
+    a <select id="lh" aria-label="Unidad a la que se pasa"></select>
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Los números se escriben con coma decimal (2,5).</p>
+
+<script src="pasos.js"></script>
+<script src="unidades.js"></script>
+<script>
+"use strict";
+const { svg, num, texto } = Pasos;
+
+// Las listas de unidades, agrupadas por lo que miden.
+function opciones(id, grupos) {
+  document.getElementById(id).innerHTML = grupos.map(([nombre, us]) => `<optgroup label="${nombre}">${us.map(u => `<option>${u}</option>`).join("")}</optgroup>`).join("");
+}
+const GRUPOS = Object.entries(Unidades.ESCALERAS).map(([m, e]) => [e.mide[0].toUpperCase() + e.mide.slice(1), Unidades.unidades(m)]);
+const GRUPOS_L = [["Volumen", ["m³", "dm³", "cm³"]], ["Capacidad", Unidades.unidades("capacidad")]];
+for (const id of ["cd", "ch"]) opciones(id, GRUPOS);
+for (const id of ["ld", "lh"]) opciones(id, GRUPOS_L);
+
+const veces = c => ["", "×10", "×100", "×1000"][c];
+const entre = c => [":10", ":100", ":1000"][c - 1];
+
+// --------------------------------------------------------------- escalera
+// Siete peldaños de mayor a menor unidad, bajando hacia la derecha.
+// `marca(k)`: clase extra del peldaño k; `vol(k)`: rótulo de volumen bajo la
+// unidad (escalera de los litros). Devuelve el centro de cada peldaño.
+const E = { x0: 50, w: 100, sube: 24, y0: 70 };
+const fondo = () => E.y0 + 6 * E.sube + 70;
+function escalera(g, { us, marca = () => "", vol = () => null, volMarca = () => "" }) {
+  const centros = [];
+  us.forEach((u, k) => {
+    const x = E.x0 + k * E.w, y = E.y0 + k * E.sube;
+    svg("rect", { x, y, width: E.w, height: fondo() - y, class: "peldano " + marca(k) }, g);
+    texto(g, { x: x + E.w / 2, y: y + 28, t: u, clase: "unidad" });
+    const v = vol(k);
+    if (v) {
+      svg("rect", { x: x + 14, y: y + 40, width: E.w - 28, height: 26, rx: 6, class: "vol-caja " + volMarca(k) }, g);
+      texto(g, { x: x + E.w / 2, y: y + 59, t: v, clase: "vol" });
+    }
+    centros.push([x + E.w / 2, y]);
+  });
+  return centros;
+}
+// Flechas de peldaño en peldaño, de i a j, con su rótulo.
+function flechas(g, centros, i, j, rotulo, clase) {
+  const paso = j > i ? 1 : -1;
+  for (let k = i; k !== j; k += paso) {
+    const [x1, y1] = centros[k], [x2, y2] = centros[k + paso];
+    const cima = Math.min(y1, y2) - 34, xm = (x1 + x2) / 2;
+    svg("path", { d: `M ${x1} ${y1 - 6} Q ${xm} ${cima} ${x2} ${y2 - 6}`, class: "flecha " + clase }, g);
+    punta(g, x2, y2 - 6, x2 - xm, y2 - 6 - cima, "flecha " + clase);
+    texto(g, { x: xm, y: cima + 6, t: rotulo, clase: "flecha-txt " + clase });
+  }
+}
+// Punta de flecha en (x, y), en la dirección (dx, dy).
+function punta(g, x, y, dx, dy, clase) {
+  const l = Math.hypot(dx, dy), ux = -dx / l, uy = -dy / l, L = 11, a = 0.5;
+  const p = s => [x + L * (ux * Math.cos(a) - uy * Math.sin(s * a)), y + L * (uy * Math.cos(a) + ux * Math.sin(s * a))];
+  const [p1, p2] = [p(1), p(-1)];
+  svg("path", { d: `M ${p1[0]} ${p1[1]} L ${x} ${y} L ${p2[0]} ${p2[1]}`, class: clase }, g);
+}
+
+// ----------------------------------------------------- cifras y coma
+// Fila de cajas con las cifras; devuelve la x de la frontera k (tras k cifras).
+function cifras(g, { cs, y, claseCaja = () => "" }) {
+  const bw = Math.min(50, 700 / cs.length), x0 = 400 - cs.length * bw / 2;
+  [...cs].forEach((d, k) => {
+    const c = claseCaja(k);
+    svg("rect", { x: x0 + k * bw, y, width: bw, height: 56, class: "caja " + c }, g);
+    texto(g, { x: x0 + (k + 0.5) * bw, y: y + 28, t: d, clase: "cifra " + c });
+  });
+  return k => x0 + k * bw;
+}
+const coma = (g, x, y, clase) => texto(g, { x, y: y + 66, t: ",", clase: "coma " + clase });
+function saltos(g, X, desde, hasta, y, clase) {
+  const paso = hasta > desde ? 1 : -1;
+  for (let k = desde, i = 1; k !== hasta; k += paso, i++) {
+    const x1 = X(k), x2 = X(k + paso);
+    svg("path", { d: `M ${x1} ${y} Q ${(x1 + x2) / 2} ${y - 30} ${x2} ${y}`, class: "salto " + clase }, g);
+    texto(g, { x: (x1 + x2) / 2, y: y - 22, t: i, clase: "salto-txt " + clase });
+    if (k + paso === hasta) punta(g, x2, y, x2 - (x1 + x2) / 2, 30, "salto " + clase);
+  }
+}
+// Las cajas, los ceros de relleno, la coma vieja, los saltos y la nueva, en
+// los pasos `pc` (cajas y saltos) y `pr` (coma nueva y resultado).
+function moverComa(g, r, y, pc, pr, sufijo) {
+  const { cifras: cs, comaInicial, comaFinal, izquierda, derecha, resultado, hasta } = r;
+  const nuevo = k => k < izquierda || k >= cs.length - derecha;
+  const X = cifras(g, { cs, y, claseCaja: k => (nuevo(k) ? "cero " : "") + "ver" + pc });
+  coma(g, X(comaInicial), y, `ver${pc} hasta${pr}`);
+  if (comaFinal !== comaInicial) saltos(g, X, comaInicial, comaFinal, y - 8, "ver" + pc);
+  coma(g, X(comaFinal), y, "nueva ver" + pr);
+  const t = svg("text", { x: 400, y: y + 120, class: "grande ver" + pr }, g);
+  t.textContent = `${r.original} ${r.desde} = ${resultado} ${hasta}${sufijo ?? ""}`;
+}
+
+// «¿Tiene sentido?»: unidad más pequeña, número más grande, y al revés.
+const sentido = (baja, desde, hasta) => baja
+  ? `<p>¿Tiene sentido? El ${hasta} es más pequeño que el ${desde}: hacen falta <b>más</b> unidades, así que el número <b>crece</b>.</p>`
+  : `<p>¿Tiene sentido? El ${hasta} es más grande que el ${desde}: hacen falta <b>menos</b> unidades, así que el número <b>se hace más pequeño</b>.</p>`;
+
+// --------------------------------------------------------- cambiar de unidad
+function dibujarCambiar(r) {
+  const { us, i, j, escalones, ceros, lugares, original, desde, hasta, resultado, factor } = r;
+  const g = Pasos.lienzo(500);
+  const centros = escalera(g, { us, marca: k => k === i ? "origen" : k === j ? "destino" : "" });
+  const baja = escalones > 0, n = Math.abs(escalones);
+  flechas(g, centros, i, j, baja ? veces(ceros) : entre(ceros), "ver2");
+  moverComa(g, r, fondo() + 70, 3, 4);
+  const cada = ceros === 1 ? "10" : ceros === 2 ? "100" : "1000";
+  const porque = ceros === 1 ? "" : ` (en ${r.magnitud}, cada escalón son ${ceros === 2 ? "dos" : "tres"} ceros: mira «¿Por qué 10, 100 y 1000?»)`;
+  const op = baja ? "multiplicar" : "dividir", lado = baja ? "derecha" : "izquierda";
+  return [
+    ["El cambio", `<p>Pasamos ${original} <b>${desde}</b> (en azul) a <b>${hasta}</b> (en naranja). Las dos están en la escalera de ${Unidades.ESCALERAS[r.magnitud].mide}.</p>`],
+    [baja ? "Bajamos" : "Subimos", `<p>De ${desde} a ${hasta} se ${baja ? "baja" : "sube"}: ${hasta} es una unidad más ${baja ? "pequeña" : "grande"}. Para ${baja ? "bajar" : "subir"} se <b>${op}</b>.</p>`],
+    ["Contamos los escalones", `<p>Hay <b>${n}</b> ${n === 1 ? "escalón" : "escalones"} y cada uno es ${baja ? "×" : ":"}${cada}${porque}.</p>
+      <p>En total: ${baja ? "×" : ":"}${num(factor)}.</p>`],
+    ["Movemos la coma", `<p>${baja ? "Multiplicar" : "Dividir"} por ${num(factor)} es mover la coma <b>${Math.abs(lugares)}</b> ${Math.abs(lugares) === 1 ? "lugar" : "lugares"} a la ${lado}${r.izquierda || r.derecha ? ", añadiendo ceros (en gris) donde faltan cifras" : ""}.</p>`],
+    ["El resultado", `<p>${original} ${desde} = <b>${resultado} ${hasta}</b>.</p>${sentido(baja, desde, hasta)}`],
+  ];
+}
+
+// --------------------------------------------------------- volumen y litros
+function dibujarLitros(r) {
+  const { desde, hasta, a, b, escalones, puenteDesde, puenteHasta, original, resultado, factor } = r;
+  const g = Pasos.lienzo(500), us = Unidades.unidades("capacidad");
+  const VOL = { 0: "= m³", 3: "= dm³", 6: "= cm³" };
+  const centros = escalera(g, { us, vol: k => VOL[k] ?? null,
+    marca: k => k === a && !puenteDesde ? "origen" : k === b && !puenteHasta ? "destino" : "",
+    volMarca: k => k === a && puenteDesde ? "origen" : k === b && puenteHasta ? "destino" : "" });
+  // La unidad de capacidad del puente se marca al cruzarlo.
+  if (puenteDesde) { const [x, y] = centros[a]; svg("rect", { x: x - E.w / 2, y, width: E.w, height: 40, class: "peldano origen ver1" }, g); texto(g, { x, y: y + 28, t: us[a], clase: "unidad ver1" }); }
+  if (puenteHasta) { const [x, y] = centros[b]; svg("rect", { x: x - E.w / 2, y, width: E.w, height: 40, class: "peldano destino ver2" }, g); texto(g, { x, y: y + 28, t: us[b], clase: "unidad ver2" }); }
+  const baja = escalones > 0, n = Math.abs(escalones);
+  if (n) flechas(g, centros, a, b, baja ? "×10" : ":10", "ver2");
+  moverComa(g, r, fondo() + 70, 3, 4);
+  const puente = puenteDesde
+    ? `<p>${desde} y ${puenteDesde} son lo mismo: <b>1 ${desde} = 1 ${puenteDesde}</b>. Cruzamos el puente: ${original} ${desde} = ${original} ${puenteDesde}.</p>`
+    : puenteHasta ? `<p>Al final cruzaremos el puente: <b>1 ${puenteHasta} = 1 ${hasta}</b>. Así que basta con llegar a ${puenteHasta}.</p>`
+    : `<p>Las dos son de capacidad: no hace falta cruzar el puente.</p>`;
+  const de = puenteDesde ?? desde, a2 = puenteHasta ?? hasta;
+  return [
+    ["La escalera de los litros", `<p>En la escalera de la capacidad, cada escalón es ×10. Debajo, el volumen que es lo mismo:</p>
+      <p><b>1 m³ = 1 kL = 1000 L</b> · <b>1 dm³ = 1 L</b> · <b>1 cm³ = 1 mL</b>.</p>`],
+    ["El puente", puente],
+    ["Contamos los escalones", n ? `<p>De ${de} a ${a2} hay <b>${n}</b> ${n === 1 ? "escalón" : "escalones"} ${baja ? "bajando: ×10" : "subiendo: :10"} cada uno. En total, ${baja ? "×" : ":"}${num(factor)}.</p>`
+      : `<p>${de} y ${a2} están en el mismo escalón: el número <b>no cambia</b>.</p>`],
+    ["Movemos la coma", n ? `<p>${baja ? "Multiplicar" : "Dividir"} por ${num(factor)} es mover la coma <b>${n}</b> ${n === 1 ? "lugar" : "lugares"} a la ${baja ? "derecha" : "izquierda"}.</p>` : `<p>La coma no se mueve.</p>`],
+    ["El resultado", `<p>${original} ${desde} = <b>${resultado} ${hasta}</b>.</p>${n ? sentido(baja, de, a2) : ""}`],
+  ];
+}
+
+// ------------------------------------------------- ¿por qué 10, 100 y 1000?
+// Una línea, un cuadrado y un cubo de lado 1 unidad grande, partidos en 10
+// trozos de la unidad pequeña.
+function dibujarPorque(r) {
+  const { g: G, p: P, litro } = r;
+  const g = Pasos.lienzo(400), L = 180, t = L / 10;
+  // Línea
+  const xl = 40, yl = 180;
+  svg("line", { x1: xl, y1: yl, x2: xl + L, y2: yl, class: "borde" }, g);
+  for (let k = 0; k <= 10; k++) svg("line", { x1: xl + k * t, y1: yl - (k % 10 ? 7 : 12), x2: xl + k * t, y2: yl + (k % 10 ? 7 : 12), class: "muesca" }, g);
+  texto(g, { x: xl + L / 2, y: yl - 30, t: `1 ${G}`, clase: "rotulo fuerte" });
+  texto(g, { x: xl + L / 2, y: 322, t: `1 ${G} = 10 ${P}`, clase: "rotulo fuerte" });
+  texto(g, { x: xl + L / 2, y: 362, t: "×10", clase: "veces ver6" });
+  // Cuadrado
+  const xc = 300, yc = 90;
+  svg("rect", { x: xc, y: yc, width: L, height: t, class: "capa ver1 hasta2" }, g);
+  svg("rect", { x: xc, y: yc, width: L, height: L, class: "lleno ver2" }, g);
+  for (let k = 1; k < 10; k++) {
+    svg("line", { x1: xc + k * t, y1: yc, x2: xc + k * t, y2: yc + L, class: "rejilla ver1" }, g);
+    svg("line", { x1: xc, y1: yc + k * t, x2: xc + L, y2: yc + k * t, class: "rejilla ver1" }, g);
+  }
+  svg("rect", { x: xc, y: yc, width: L, height: L, class: "borde ver1" }, g);
+  texto(g, { x: xc + L / 2, y: yc - 12, t: `1 ${G}`, clase: "rotulo ver1" });
+  texto(g, { x: xc + L / 2, y: 322, t: `1 ${G}² = 100 ${P}²`, clase: "rotulo fuerte ver2" });
+  texto(g, { x: xc + L / 2, y: 362, t: "×100", clase: "veces ver6" });
+  // Cubo en perspectiva caballera: cara de delante, de arriba y de la derecha.
+  const xk = 560, yk = 120, s = 140, d = 50, u = s / 10, e = d / 10;
+  const cara = (pts, clase) => svg("polygon", { points: pts.map(p => p.join(",")).join(" "), class: clase }, g);
+  const del = [[xk, yk], [xk + s, yk], [xk + s, yk + s], [xk, yk + s]];
+  const arr = [[xk, yk], [xk + d, yk - d], [xk + s + d, yk - d], [xk + s, yk]];
+  const der = [[xk + s, yk], [xk + s + d, yk - d], [xk + s + d, yk + s - d], [xk + s, yk + s]];
+  cara(del, "cara ver3"); cara(arr, "cara arriba ver3"); cara(der, "cara lado ver3");
+  // Capa de arriba: la cara de arriba y la primera fila de delante y de la derecha.
+  cara(arr, "capa ver3 hasta5");
+  cara([[xk, yk], [xk + s, yk], [xk + s, yk + u], [xk, yk + u]], "capa ver3 hasta5");
+  cara([[xk + s, yk], [xk + s + d, yk - d], [xk + s + d, yk - d + u], [xk + s, yk + u]], "capa ver3 hasta5");
+  for (const c of [del, arr, der]) cara(c, "lleno ver4");
+  for (let k = 1; k < 10; k++) {
+    svg("line", { x1: xk + k * u, y1: yk, x2: xk + k * u, y2: yk + s, class: "rejilla ver3" }, g);
+    svg("line", { x1: xk, y1: yk + k * u, x2: xk + s, y2: yk + k * u, class: "rejilla ver3" }, g);
+    svg("line", { x1: xk + k * u, y1: yk, x2: xk + k * u + d, y2: yk - d, class: "rejilla ver3" }, g);
+    svg("line", { x1: xk + k * e, y1: yk - k * e, x2: xk + s + k * e, y2: yk - k * e, class: "rejilla ver3" }, g);
+    svg("line", { x1: xk + s + k * e, y1: yk - k * e, x2: xk + s + k * e, y2: yk + s - k * e, class: "rejilla ver3" }, g);
+    svg("line", { x1: xk + s, y1: yk + k * u, x2: xk + s + d, y2: yk + k * u - d, class: "rejilla ver3" }, g);
+  }
+  for (const c of [del, arr, der]) cara(c, "borde ver3");
+  texto(g, { x: xk + s / 2, y: yk + s + 26, t: `1 ${G}`, clase: "rotulo ver3" });
+  texto(g, { x: xk + (s + d) / 2, y: 322, t: `1 ${G}³ = 1000 ${P}³`, clase: "rotulo fuerte ver4" });
+  texto(g, { x: xk + (s + d) / 2, y: 362, t: "×1000", clase: "veces ver6" });
+  if (litro) texto(g, { x: xk + (s + d) / 2, y: 28, t: litro, clase: "rotulo fuerte ver5" });
+  const pasos = [
+    ["Una línea: longitud", `<p>Un segmento de <b>1 ${G}</b> se parte en trozos de 1 ${P}: caben <b>10</b>. Por eso 1 ${G} = 10 ${P}.</p>`],
+    ["Un cuadrado: superficie", `<p>Un cuadrado de 1 ${G} de lado mide <b>1 ${G}²</b>. Lo partimos en cuadraditos de 1 ${P} de lado (1 ${P}²): en una fila caben <b>10</b>.</p>`],
+    ["Todo el cuadrado", `<p>Hay <b>10 filas</b> de 10 cuadraditos: 10 · 10 = <b>100</b>. Por eso 1 ${G}² = 100 ${P}², y no 10.</p>`],
+    ["Un cubo: volumen", `<p>Un cubo de 1 ${G} de lado tiene <b>1 ${G}³</b>. Lo partimos en cubitos de 1 ${P} de lado (1 ${P}³). La capa de arriba es como el cuadrado: <b>100</b> cubitos.</p>`],
+    ["Todas las capas", `<p>Hay <b>10 capas</b> de 100 cubitos: 10 · 100 = <b>1000</b>. Por eso 1 ${G}³ = 1000 ${P}³.</p>`],
+  ];
+  if (litro) pasos.push(["Y los litros", r.pareja === "m-dm"
+    ? `<p>Cada cubito de 1 dm de lado es <b>1 litro</b> (un brik de leche mide casi eso). En 1 m³ caben 1000: <b>1 m³ = 1000 L</b>.</p>`
+    : `<p>El cubo grande, de 1 dm de lado, es <b>1 litro</b>. Cada cubito de 1 cm de lado es <b>1 mililitro</b>: 1 L = 1000 mL = 1000 cm³.</p>`]);
+  else pasos.push(["Lo mismo con cualquier unidad", `<p>Pasa igual con cualquier unidad y la siguiente: 10 en la línea, 100 en el cuadrado y 1000 en el cubo.</p>`]);
+  pasos.push(["La escalera", `<p>Por eso, en la escalera, cada escalón es <b>×10</b> en longitud (m), <b>×100</b> en superficie (m²) y <b>×1000</b> en volumen (m³): uno, dos o tres ceros, como el exponente.</p>`]);
+  return pasos;
+}
+
+const MODOS = {
+  porque: { campos: { pareja: "pp" }, dibujar: dibujarPorque },
+  cambiar: { campos: { numero: "cn", desde: "cd", hasta: "ch" }, dibujar: dibujarCambiar },
+  litros: { campos: { numero: "ln", desde: "ld", hasta: "lh" }, dibujar: dibujarLitros },
+};
+for (const [m, def] of Object.entries(MODOS))
+  Object.assign(def, { calcular: Unidades.calcular[m], ejemplos: Unidades.EJEMPLOS[m], azar: () => Unidades.azar(m) });
+const elegirModo = Pasos.montar(MODOS, "porque");
+</script>
+</body>
+</html>

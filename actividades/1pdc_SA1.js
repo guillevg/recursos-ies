@@ -157,6 +157,41 @@
     };
   }
 
+  // ---------------------------------------------------------- cambio de unidades
+  // La escalera: bajar un escalón (unidad más pequeña) es ×10 en m, g y L,
+  // ×100 en m² y ×1000 en m³; y el puente 1 dm³ = 1 L (volumen y litros).
+  // Los números se llevan como entero y número de decimales, sin la coma flotante.
+  const PREF = ["k", "h", "da", "", "d", "c", "m"];
+  const ESCALERAS = { m: 1, g: 1, L: 1, "m²": 2, "m³": 3 };
+  const QUE = { m: "longitud", g: "masa", L: "capacidad", "m²": "superficie", "m³": "volumen" };
+  const POS_L = { kL: 0, hL: 1, daL: 2, L: 3, dL: 4, cL: 5, mL: 6, "m³": 0, "dm³": 3, "cm³": 6 };
+  // (n, p): n / 10^p, sin ceros sobrantes.
+  const limpio = (n, p) => { while (p > 0 && n % 10 === 0) { n /= 10; p--; } return [n, p]; };
+  const mover = ([n, p], lugares) => lugares >= 0 ? limpio(n * 10 ** Math.max(0, lugares - p), Math.max(0, p - lugares)) : limpio(n, p - lugares);
+  const escribe = ([n, p]) => fijo(n, p);
+  // Escalera en SVG: origen en azul, destino en naranja y, resuelta, las flechas.
+  function escaleraSVG(us, i, j, rotulo, resuelto, vol = {}) {
+    const w = 80, sube = 18, y0 = 60, fondo = y0 + 6 * sube + 56;
+    let s = `<svg viewBox="0 0 ${7 * w + 20} ${fondo + 6}" role="img">`;
+    us.forEach((u, k) => {
+      const x = 10 + k * w, y = y0 + k * sube;
+      s += `<rect x="${x}" y="${y}" width="${w}" height="${fondo - y}" class="${k === i ? "c-azul" : k === j ? "c-naranja" : "c-blanco"}" style="stroke: var(--fg); stroke-width: 1.2"/>`;
+      s += `<text class="t-seg" x="${x + w / 2}" y="${y + 24}">${u}</text>`;
+      if (vol[k]) s += `<text class="t-seg" style="font-size: 14px" x="${x + w / 2}" y="${y + 46}">${vol[k]}</text>`;
+    });
+    if (resuelto) {
+      const paso = j > i ? 1 : -1;
+      for (let k = i; k !== j; k += paso) {
+        const x1 = 10 + k * w + w / 2, y1 = y0 + k * sube - 4, x2 = x1 + paso * w, y2 = y1 + paso * sube, cy = Math.min(y1, y2) - 30, xm = (x1 + x2) / 2;
+        const dx = x2 - xm, dy = y2 - cy, l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, L = 10, ww = 5;
+        s += `<path class="flecha" d="M${x1},${y1} Q${xm},${cy} ${x2},${y2}"/>`;
+        s += `<path class="flecha-punta" d="M${x2},${y2} L${x2 - L * ux - ww * uy},${y2 - L * uy + ww * ux} L${x2 - L * ux + ww * uy},${y2 - L * uy - ww * ux} Z"/>`;
+        s += `<text class="t-seg" style="font-size: 14px" x="${xm}" y="${cy + 4}">${rotulo}</text>`;
+      }
+    }
+    return s + `</svg>`;
+  }
+
   const acts = {
     decimales: {
       titulo: "¿Qué decimal es mayor?",
@@ -206,6 +241,61 @@
           },
           operaciones: `<p>${A} = ${ancho(a)} &nbsp;&nbsp; ${B} = ${ancho(b)}</p>
                         <p><b>${ok === "igual" ? `${A} = ${B}` : ok === "a" ? `${A} > ${B}` : `${B} > ${A}`}</b></p>`,
+        };
+      },
+    },
+
+    unidades: {
+      titulo: "Cambiar de unidad",
+      sub: "La escalera: contar escalones y mover la coma",
+      herramienta: ["Cambio de unidades paso a paso", "unidades.html#cambiar"],
+      pista: "Busca las dos unidades en la escalera. Si bajas (a una unidad más pequeña), multiplicas; si subes, divides. Cada escalón es ×10 en m, g y L; ×100 en m² (la coma salta dos lugares) y ×1000 en m³ (tres lugares). Y 1 dm³ = 1 L, 1 cm³ = 1 mL, 1 m³ = 1000 L.",
+      dibujoOculto: true,
+      variantes: [["todas", "Mezclados"], ["lineal", "m, g y L"], ["m²", "Superficie"], ["litros", "Volumen y litros"]],
+      nuevo(variante = "todas") {
+        const tipo = variante === "todas" ? elegir(["lineal", "lineal", "m²", "litros"]) : variante;
+        const dato = elegir([[azar(1, 999), 0], [azar(1, 999), 1], [azar(1, 99), 2], [azar(2, 9) * 10 ** azar(1, 3), 0]]);
+        let us, i, j, ceros, base, vol = {}, pasos;
+        if (tipo === "litros") {
+          const todas = Object.keys(POS_L);
+          let a, b;
+          do { a = elegir(todas); b = elegir(todas); }
+          while (a === b || POS_L[a] === POS_L[b] || !(a.endsWith("³") || b.endsWith("³")) || Math.abs(POS_L[a] - POS_L[b]) > 6);
+          us = PREF.map(p => p + "L"); i = POS_L[a]; j = POS_L[b]; ceros = 1; base = [a, b];
+          vol = { 0: "= m³", 3: "= dm³", 6: "= cm³" };
+          pasos = ["unidades.html", "litros"];
+        } else {
+          const b0 = tipo === "m²" ? "m²" : elegir(["m", "g", "L"]);
+          ceros = ESCALERAS[b0]; us = PREF.map(p => p + b0);
+          do { i = azar(0, 6); j = azar(0, 6); } while (i === j || Math.abs(i - j) * ceros > 6);
+          base = [us[i], us[j]];
+          pasos = ["unidades.html", "cambiar"];
+        }
+        const [desde, hasta] = base, lugares = (j - i) * ceros;
+        const D = escribe(limpio(...dato)), R = mover(limpio(...dato), lugares), res = escribe(R);
+        const baja = lugares > 0, n = Math.abs(j - i), factor = miles(10 ** Math.abs(lugares));
+        const mal1 = escribe(mover(limpio(...dato), -lugares));                 // al revés
+        const mal2 = ceros > 1 ? escribe(mover(limpio(...dato), j - i)) : null;  // ×10 por escalón en m²
+        const CTX = tipo === "litros"
+          ? [`Pasa <span class="dato">${D} ${desde}</span> a ${hasta}.`, `Un recipiente tiene <span class="dato">${D} ${desde}</span>. ¿Cuántos ${hasta} son?`]
+          : [`Pasa <span class="dato">${D} ${desde}</span> a ${hasta}.`, `Expresa <span class="dato">${D} ${desde}</span> en ${hasta}.`];
+        const puente = tipo === "litros" ? ` (por el puente: ${desde.endsWith("³") ? `1 ${desde} = 1 ${us[i]}` : `1 ${us[j]} = 1 ${hasta}`})` : "";
+        return {
+          html: elegir(CTX),
+          pasos: [...pasos, { numero: D.replace(/ /g, ""), desde, hasta }],
+          dibujo: r => escaleraSVG(us, i, j, baja ? `×${miles(10 ** ceros)}` : `:${miles(10 ** ceros)}`, r, vol),
+          campos: [{ id: "r", etiqueta: `En ${hasta}` }],
+          _ok: { r: res },
+          comprobar(v) {
+            const x = num(v.r), ok = cerca(x, num(res), 1e-9 * Math.max(1, num(res)));
+            if (ok) return { bien: true, texto: "¡Correcto!", explica: "" };
+            if (cerca(x, num(mal1), 1e-9 * Math.max(1, num(mal1)))) return resultado(["r"], `Has ${baja ? "dividido" : "multiplicado"}, y era al revés.`, `De ${desde} a ${hasta} se ${baja ? "baja: la unidad es más pequeña y hacen falta más, así que el número crece" : "sube: la unidad es más grande y hacen falta menos, así que el número se hace más pequeño"}.`);
+            if (mal2 && cerca(x, num(mal2), 1e-9 * Math.max(1, num(mal2)))) return resultado(["r"], "En superficie cada escalón no es ×10.", "Un cuadrado de 1 dm de lado tiene 10 · 10 = 100 cuadraditos de 1 cm²: cada escalón es ×100, la coma salta dos lugares.");
+            if (cerca(x, num(D))) return resultado(["r"], "Has dejado el número igual.", `Son unidades distintas: cuenta los escalones de ${desde} a ${hasta}.`);
+            return resultado(["r"], "Todavía no.", `Cuenta los escalones de ${desde} a ${hasta}${puente}. ¿Subes o bajas?`);
+          },
+          operaciones: `<p>De ${desde} a ${hasta}${puente}: ${n} ${n === 1 ? "escalón" : "escalones"} ${baja ? "bajando" : "subiendo"}, ${baja ? "×" : ":"}${factor}.</p>
+                        <p>La coma salta ${Math.abs(lugares)} ${Math.abs(lugares) === 1 ? "lugar" : "lugares"} a la ${baja ? "derecha" : "izquierda"}. &nbsp; <b>${D} ${desde} = ${res} ${hasta}</b></p>`,
         };
       },
     },
@@ -366,6 +456,7 @@
       A: ["decimales", "redondeo", "fracciones"],
       B: ["pcde", "pcque", "queme"],
       C: ["kilo", "unidad"],
+      D: ["unidades"],
     },
     actividades: acts,
   });
