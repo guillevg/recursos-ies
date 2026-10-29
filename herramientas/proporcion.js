@@ -1,5 +1,5 @@
 // Proporcionalidad paso a paso. Siete modos: directa (recta doble y
-// reducción a la unidad), escalas (lo que es 1 cm del plano), inversa
+// reducción a la unidad), escalas (tres fracciones y factor de conversión), inversa
 // (barras de tiempo: juntar en lo que tardaría uno solo y repartir; el
 // producto no cambia), ¿es proporcional? (cocientes y productos de una
 // tabla), reparto proporcional (barras), «¿cuál sale más barato?» (precio
@@ -54,17 +54,24 @@ const Proporcion = (() => {
     return { qa, pa, qb, pb, unidad, ua, ub, gana: ua < ub ? "A" : ua > ub ? "B" : "igual", ahorro: r9(Math.abs(ua - ub)) };
   }
 
-  // Escala 1 : e. sentido "real": se da la medida del plano (cm) y se busca
-  // la real, en `unidad` (m o km); "plano": al revés. `uno`: lo que es 1 cm
-  // del plano en la realidad, en esa unidad.
-  const FACTOR = { m: 100, km: 100000 };
-  function escala({ e, medida, sentido = "real", unidad = "m" }) {
+  // Escala 1 : e, con tres fracciones (plano arriba, realidad abajo): la
+  // escala en la unidad del dato, la reducción a 1 de esa unidad y el dato
+  // con «?». sentido "real": el dato es la medida del plano y se busca la
+  // real; "plano": al revés. `ud`: unidad del dato; `up`: la que piden.
+  // `y`: el resultado en `ud`; `sol`: en `up`; `factor`: la fracción de
+  // conversión [n, un, d, ud] (n un / d ud), o null si no hay que cambiar.
+  const CM = { mm: 0.1, cm: 1, m: 100, km: 100000 };
+  function escala({ e, medida, sentido = "real", ud = "cm", up = "m" }) {
     if (!(e > 1 && medida > 0)) return { error: "La escala (1 : e) necesita e mayor que 1, y la medida tiene que ser mayor que 0." };
-    if (!FACTOR[unidad]) return { error: "La unidad de la realidad tiene que ser m o km." };
-    if (sentido !== "real" && sentido !== "plano") return { error: "Elige qué se busca: la medida real o la del plano." };
-    const f = FACTOR[unidad], uno = r9(e / f);
-    const plano = sentido === "real" ? medida : r9(medida / uno), real = sentido === "real" ? r9(medida * uno) : medida;
-    return { e, medida, sentido, unidad, f, uno, plano, real };
+    if (!CM[ud] || !CM[up]) return { error: "Las unidades tienen que ser mm, cm, m o km." };
+    if (sentido !== "real" && sentido !== "plano") return { error: "Elige qué se conoce: la medida del plano o la real." };
+    const real = sentido === "real";
+    // La fracción del medio: 1 del dato arriba (plano) o abajo (realidad).
+    const medio = real ? [1, e] : [r9(1 / e), 1];
+    const y = real ? r9(medida * e) : r9(medida / e);
+    const ratio = CM[ud] / CM[up];
+    const factor = ud === up ? null : ratio > 1 ? [ratio, up, 1, ud] : [1, up, r9(1 / ratio), ud];
+    return { e, medida, sentido, ud, up, medio, y, sol: r9(y * ratio), factor, igual: real };
   }
 
   // ¿Es proporcional? Tabla de valores x → y (texto: «1 2 5», con coma decimal).
@@ -113,9 +120,10 @@ const Proporcion = (() => {
       { etiqueta: "Muro: 6 obreros, 15 días", a: 6, b: 15, x: 9, ua: "obreros", ub: "días", texto: "6 obreros levantan un muro en 15 días. ¿Cuántos días tardarían 9 obreros?" },
     ],
     escala: [
-      { etiqueta: "Mapa 1 : 50 000, 6 cm", e: 50000, medida: 6, sentido: "real", unidad: "km", texto: "En un mapa a escala 1 : 50 000, dos pueblos están a 6 cm. ¿Cuántos kilómetros los separan en la realidad?" },
-      { etiqueta: "Plano 1 : 50, salón de 4,5 m", e: 50, medida: 4.5, sentido: "plano", unidad: "m", texto: "En el plano de una casa a escala 1 : 50, ¿cuánto mide un salón de 4,5 m de largo?" },
-      { etiqueta: "Plano 1 : 200, 4,5 cm", e: 200, medida: 4.5, sentido: "real", unidad: "m", texto: "En el plano de un instituto a escala 1 : 200, la cancha mide 4,5 cm de ancho. ¿Cuánto mide en la realidad?" },
+      { etiqueta: "Mapa 1 : 50 000, 6 cm", e: 50000, medida: 6, sentido: "real", ud: "cm", up: "km", texto: "En un mapa a escala 1 : 50 000, dos pueblos están a 6 cm. ¿Cuántos kilómetros los separan en la realidad?" },
+      { etiqueta: "Plano 1 : 50, salón de 4,5 m", e: 50, medida: 4.5, sentido: "plano", ud: "m", up: "cm", texto: "En el plano de una casa a escala 1 : 50, ¿cuántos centímetros mide un salón de 4,5 m de largo?" },
+      { etiqueta: "Plano 1 : 200, 4,5 cm", e: 200, medida: 4.5, sentido: "real", ud: "cm", up: "m", texto: "En el plano de un instituto a escala 1 : 200, la cancha mide 4,5 cm de ancho. ¿Cuántos metros mide en la realidad?" },
+      { etiqueta: "Mapa 1 : 50 000, 3 km", e: 50000, medida: 3, sentido: "plano", ud: "km", up: "cm", texto: "Dos pueblos están a 3 km. ¿A cuántos centímetros están en un mapa a escala 1 : 50 000?" },
     ],
     tabla: [
       { etiqueta: "Queso: kg y €", x: "1 2 3 5", y: "2,4 4,8 7,2 12", ux: "kg", uy: "€", texto: "1, 2, 3 y 5 kg de queso cuestan 2,40; 4,80; 7,20 y 12 €. ¿Es una proporcionalidad?" },
@@ -144,7 +152,11 @@ const Proporcion = (() => {
     if (modo === "directa") { const a = ent(2, 8), k = ent(2, 15); return { a, b: a * k, x: ent(2, 12), ua: "", ub: "" }; }
     // a · b = x · y con y entero: b = x · t e y = a · t.
     if (modo === "inversa") { let a, x; do { a = ent(2, 8); x = ent(2, 10); } while (a === x); const t = ent(1, 3); return { a, b: x * t, x, ua: "", ub: "" }; }
-    if (modo === "escala") { const e = [50, 100, 200, 25000, 50000, 100000][ent(0, 5)], km = e > 1000; return { e, medida: ent(2, 12), sentido: r() < .5 ? "real" : "plano", unidad: km ? "km" : "m" }; }
+    // Del plano (cm) a la realidad (m o km), o al revés con un plano de cm enteros.
+    if (modo === "escala") {
+      const e = [50, 100, 200, 25000, 50000, 100000][ent(0, 5)], lejos = e > 1000 ? "km" : "m", plano = ent(2, 12);
+      return r() < .5 ? { e, medida: plano, sentido: "real", ud: "cm", up: lejos } : { e, medida: r9(plano * e / CM[lejos]), sentido: "plano", ud: lejos, up: "cm" };
+    }
     if (modo === "tabla") {
       const xs = [1, 2, 3, 4, 6].slice(0, ent(3, 5)), k = ent(2, 9), t = ["directa", "inversa", "ninguna"][ent(0, 2)];
       const ys = xs.map(v => t === "directa" ? k * v : t === "inversa" ? 12 * k / v : v + k);

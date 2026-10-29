@@ -84,9 +84,9 @@
 
       escalas: {
         titulo: "Escalas",
-        sub: "Lo que es 1 cm del plano en la realidad",
+        sub: "Tres fracciones y el cambio de unidad",
         herramienta: ["Escalas", "proporcion.html#escala"],
-        pista: "En una escala 1 : 50 000, 1 cm del plano son 50 000 cm de la realidad. Pasa esos centímetros a la unidad que te piden (de cm a m se divide entre 100; de cm a km, entre 100 000). Después multiplica por los centímetros del plano o, para ir de la realidad al plano, divide.",
+        pista: "Escribe la escala como fracción, con el plano arriba (1 : 50 000 es 1/50 000), en la unidad del dato. En medio, reduce a 1 de esa unidad; al final, el dato y «?». Cuando lo tengas, cambia a la unidad que te piden con un factor de conversión, como 1 km / 100 000 cm.",
         variantes: [["todos", "Mezclados"], ["real", "Del plano a la realidad"], ["plano", "De la realidad al plano"]],
         nuevo(variante = "todos") {
           const sentido = variante === "todos" ? elegir(["real", "plano"]) : variante;
@@ -97,7 +97,7 @@
             e = mapa ? elegir([20000, 25000, 50000, 100000, 200000]) : elegir([50, 100, 200]);
             plano = mapa ? elegir([2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 2.5, 3.5, 4.5, 7.5]) : elegir([2, 3, 4, 5, 6, 2.5, 3.5, 4.5, 5.5, 7.5]);
           } while (!mapa && e === 50 && plano === 16);
-          const unidad = mapa ? "km" : "m", f = mapa ? 100000 : 100, uno = e / f, real = r2(plano * uno * 1000) / 1000;
+          const unidad = mapa ? "km" : "m", f = mapa ? 100000 : 100, real = r2(plano * e / f * 1000) / 1000;
           const E = `1 : ${miles(e)}`;
           let html;
           if (mapa) html = sentido === "real"
@@ -110,26 +110,31 @@
                       `En el plano del instituto a escala <span class="dato">${E}</span>, el pasillo mide <span class="dato">${fmt(plano)} cm</span>. ¿Cuántos metros mide en la realidad?`])
             : elegir([`Una habitación mide <span class="dato">${fmt(real)} m</span> de largo. ¿Cuánto mide en un plano a escala <span class="dato">${E}</span>?`,
                       `La cancha del instituto mide <span class="dato">${fmt(real)} m</span> de ancho. ¿Cuánto mide en un plano a escala <span class="dato">${E}</span>?`]);
-          const res = sentido === "real" ? real : plano;
+          // El método de clase: las tres fracciones en la unidad del dato (cm
+          // del plano o m/km de la realidad) y, aparte, el cambio de unidad.
+          const ud = sentido === "real" ? "cm" : unidad, up = sentido === "real" ? unidad : "cm";
+          const y = Math.round((sentido === "real" ? plano * e : real / e) * 1e9) / 1e9, res = sentido === "real" ? real : plano;
+          const ver = v => miles(fmt(v));
+          const factor = sentido === "real" ? F(`1 ${up}`, `${miles(f)} ${ud}`) : F(`${miles(f)} ${up}`, `1 ${ud}`);
           return {
             html,
-            campos: [{ id: "k", etiqueta: `1 cm del plano son (${unidad})` }, { id: "y", etiqueta: sentido === "real" ? `En la realidad (${unidad})` : "En el plano (cm)" }],
-            pasos: ["proporcion.html", "escala", { e, medida: sentido === "real" ? plano : real, sentido, unidad }],
-            _ok: { k: fmt(uno), y: fmt(res) },
+            campos: [{ id: "k", etiqueta: sentido === "real" ? "En la realidad (cm)" : `En el plano (${ud})` }, { id: "y", etiqueta: sentido === "real" ? `En la realidad (${up})` : "En el plano (cm)" }],
+            pasos: ["proporcion.html", "escala", { e, medida: sentido === "real" ? plano : real, sentido, ud, up }],
+            _ok: { k: fmt(y), y: fmt(res) },
             comprobar(v) {
               const K = num(v.k), Y = num(v.y), mal = [];
-              if (!cerca(K, uno, uno / 1000)) mal.push("k");
+              if (!cerca(K, y, y / 1000)) mal.push("k");
               if (!cerca(Y, res, .01)) mal.push("y");
               if (!mal.length) return resultado(mal);
-              if (mal.includes("k") && cerca(K, e)) return resultado(mal, "Eso son centímetros.", `1 cm del plano son ${miles(e)} cm de la realidad: pásalos a ${unidad} dividiendo entre ${miles(f)}.`);
-              if (mal.includes("k") && mapa && cerca(K, e / 100, .001)) return resultado(mal, "Eso son metros, no kilómetros.", `De cm a km se divide entre 100 000: ${miles(e)} : 100 000.`);
-              if (mal.includes("y") && sentido === "real" && cerca(Y, plano * e)) return resultado(mal, "Eso son centímetros de la realidad.", `Pásalo a ${unidad}, o multiplica ${fmt(plano)} por lo que es 1 cm.`);
-              if (mal.includes("y") && sentido === "plano" && cerca(Y, real * uno, .01)) return resultado(mal, "Has multiplicado; aquí hay que dividir.", `¿Cuántas veces caben ${fmt(uno)} ${unidad} en ${fmt(real)} ${unidad}?`);
-              if (mal.length === 1 && mal[0] === "y") return resultado(mal, "Lo de 1 cm está bien; revisa el final.", sentido === "real" ? `Multiplica ${fmt(uno)} por ${fmt(plano)}.` : `Divide ${fmt(real)} entre ${fmt(uno)}.`);
-              return resultado(mal, "Todavía no.", `1 cm del plano son ${miles(e)} cm de la realidad. ¿Cuántos ${unidad} son?`);
+              if (mal.includes("k") && sentido === "plano" && cerca(K, real * e, real * e / 1000)) return resultado(mal, "Has multiplicado; aquí hay que dividir.", `Lo que conoces es la realidad, abajo: en la fracción del medio va 1 ${ud} abajo, y de ${miles(e)} ${ud} a 1 ${ud} se divide entre ${miles(e)}.`);
+              if (mal.includes("y") && cerca(Y, y, y / 1000)) return resultado(mal, `Eso son ${ud}.`, `Cámbialo a ${up} multiplicando por ${factor}.`);
+              if (mal.length === 1 && mal[0] === "y") return resultado(mal, "Las fracciones están bien; revisa el cambio de unidad.", `Multiplica ${ver(y)} ${ud} por ${factor}.`);
+              return resultado(mal, "Todavía no.", `Escribe la escala en ${ud}: 1 ${ud} del plano son ${miles(e)} ${ud} de la realidad.`);
             },
-            operaciones: `<p>1 cm del plano: ${miles(e)} cm = ${miles(e)} : ${miles(f)} = ${fmt(uno)} ${unidad}</p>
-                          <p>${sentido === "real" ? `${fmt(plano)} · ${fmt(uno)} = <b>${fmt(real)} ${unidad}</b>` : `${fmt(real)} : ${fmt(uno)} = <b>${fmt(plano)} cm</b>`}</p>`,
+            operaciones: `<p>${sentido === "real"
+                            ? `${F("1 cm", `${miles(e)} cm`)} = ${F("1 cm", `${miles(e)} cm`)} = ${F(`${fmt(plano)} cm`, "?")} → ${fmt(plano)} · ${miles(e)} = ${ver(y)} cm`
+                            : `${F(`1 ${ud}`, `${miles(e)} ${ud}`)} = ${F(`${ver(1 / e)} ${ud}`, `1 ${ud}`)} = ${F("?", `${fmt(real)} ${ud}`)} → ${ver(1 / e)} · ${fmt(real)} = ${ver(y)} ${ud}`}</p>
+                          <p>${ver(y)} ${ud} · ${factor} = <b>${ver(res)} ${up}</b></p>`,
           };
         },
       },

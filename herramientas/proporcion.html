@@ -58,6 +58,8 @@
   .flecha { fill: none; stroke: var(--rojo); stroke-width: 2.2; }
   .punta { fill: var(--rojo); }
   .op-flecha { font-size: 21px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
+  .frac-dir.tenue { fill-opacity: .35; }
+  .tachado { text-decoration: line-through; fill: var(--rojo); }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
 <script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
@@ -83,9 +85,10 @@
     → <input id="db" type="number" min="0" step="any" class="corto" aria-label="Segunda cantidad"> <input id="dub" type="text" size="7" aria-label="Unidad de la segunda magnitud">;
     ¿y <input id="dx" type="number" min="0" step="any" class="corto" aria-label="Cantidad nueva">?</span>
   <span data-para="escala">escala 1 : <input id="ee" type="number" min="1" step="any" aria-label="Denominador de la escala">;
-    <select id="es" aria-label="Qué se busca"><option value="real">en el plano mide</option><option value="plano">en la realidad mide</option></select>
+    <select id="es" aria-label="Qué se conoce"><option value="real">en el plano mide</option><option value="plano">en la realidad mide</option></select>
     <input id="em" type="number" min="0" step="any" class="corto" aria-label="Medida que se conoce">
-    <select id="eu" aria-label="Unidad de la realidad"><option value="m">(realidad en m)</option><option value="km">(realidad en km)</option></select></span>
+    <select id="eud" aria-label="Unidad de la medida que se conoce"><option>mm</option><option>cm</option><option>m</option><option>km</option></select>;
+    respuesta en <select id="eup" aria-label="Unidad en la que se pide la respuesta"><option>mm</option><option>cm</option><option>m</option><option>km</option></select></span>
   <span data-para="inversa"><input id="ia" type="number" min="0" step="any" class="corto" aria-label="Primera cantidad"> <input id="iua" type="text" size="7" aria-label="Unidad de la primera magnitud">
     tardan <input id="ib" type="number" min="0" step="any" class="corto" aria-label="Segunda cantidad"> <input id="iub" type="text" size="5" aria-label="Unidad de la segunda magnitud">;
     ¿y <input id="ix" type="number" min="0" step="any" class="corto" aria-label="Cantidad nueva">?</span>
@@ -129,41 +132,46 @@ const singular = u => /[lnrdj]es$/.test(u) ? u.slice(0, -2) : /ces$/.test(u) ? u
 const con = (v, u) => u ? `${num(v)} ${v === 1 ? singular(u) : u}` : num(v);
 
 // ------------------------------------------------------------------ directa
-// Tres fracciones (lo que se busca arriba, lo que se conoce abajo): los
-// datos = la unidad (vacía al principio) = la situación final, con «?».
-// Paso 1: en la del medio, 1 de la magnitud que se conoce al final. Paso 2:
-// flechas curvas «: a» de la primera a la del medio; paso 3, «· x» de la del
-// medio a la última. Debajo, la recta doble, al mismo ritmo.
-function fraccionesDirecta(g, r) {
-  const { a, b, x, ua, ub, k, y } = r;
-  const c = [170, 400, 630], arriba = 78, raya = 92, abajo = 121, med = 46;
-  const punta = svg("marker", { id: "punta-directa", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" }, svg("defs", {}, g));
+// Tres fracciones iguales (directa y escalas) en las columnas 170, 400 y 630.
+// `textos`: [columna, ¿arriba?, texto, clase]; `resalte`: [columna, ¿arriba?,
+// clase], el recuadro de lo que se conoce; `flechas`: [de, a, operación,
+// clase], curvas por encima de los numeradores y por debajo de los
+// denominadores. `media`: media anchura de cada raya.
+function tresFracciones(g, { textos, resalte, flechas, id, media = 72 }) {
+  const c = [170, 400, 630], arriba = 78, raya = 92, abajo = 121, hueco = 46;
+  const punta = svg("marker", { id, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" }, svg("defs", {}, g));
   svg("path", { d: "M 0 0 L 10 5 L 0 10 Z", class: "punta" }, punta);
-  const fraccion = (cx, num_, den, clases = ["", ""]) => {
-    svg("line", { x1: cx - 72, y1: raya, x2: cx + 72, y2: raya, class: "raya-frac" }, g);
-    if (num_ !== null) texto(g, { x: cx, y: arriba, t: num_, clase: "frac-dir " + clases[0] });
-    if (den !== null) texto(g, { x: cx, y: abajo, t: den, clase: "frac-dir " + clases[1] });
-  };
-  fraccion(c[0], con(b, ub), con(a, ua));
-  fraccion(c[1], null, null);
-  fraccion(c[2], null, con(x, ua));
+  for (const cx of c) svg("line", { x1: cx - media, y1: raya, x2: cx + media, y2: raya, class: "raya-frac" }, g);
   for (const xx of [(c[0] + c[1]) / 2, (c[1] + c[2]) / 2]) texto(g, { x: xx, y: raya + 8, t: "=", clase: "frac-dir" });
-  texto(g, { x: c[1], y: abajo, t: con(1, ua), clase: "frac-dir fuerte ver1" });
-  texto(g, { x: c[1], y: arriba, t: con(k, ub), clase: "frac-dir ver2" });
-  texto(g, { x: c[2], y: arriba, t: "?", clase: "frac-dir hasta3" });
-  texto(g, { x: c[2], y: arriba, t: con(y, ub), clase: "frac-dir fuerte ver3" });
-  // Lo que se conoce de la situación final, recuadrado en el paso 1.
-  svg("rect", { x: c[2] - 62, y: abajo - 26, width: 124, height: 36, rx: 8, class: "resalte ver1 hasta2" }, g);
-  // Dos flechas curvas, por encima de los numeradores y por debajo de los denominadores.
-  const flechas = (de, a_, op, clase) => {
-    const grupo = svg("g", { class: clase }, g), x1 = de + med, x2 = a_ - med, xm = (de + a_) / 2;
-    svg("path", { d: `M ${x1} 52 Q ${xm} 6 ${x2} 52`, class: "flecha", "marker-end": "url(#punta-directa)" }, grupo);
-    svg("path", { d: `M ${x1} 134 Q ${xm} 180 ${x2} 134`, class: "flecha", "marker-end": "url(#punta-directa)" }, grupo);
+  for (const [k, sube, t, clase = ""] of textos) texto(g, { x: c[k], y: sube ? arriba : abajo, t, clase: "frac-dir " + clase });
+  if (resalte) {
+    const [k, sube, clase] = resalte;
+    svg("rect", { x: c[k] - media + 10, y: (sube ? arriba : abajo) - 26, width: 2 * media - 20, height: 36, rx: 8, class: "resalte " + clase }, g);
+  }
+  for (const [de, a_, op, clase] of flechas) {
+    const grupo = svg("g", { class: clase }, g), x1 = c[de] + hueco, x2 = c[a_] - hueco, xm = (c[de] + c[a_]) / 2;
+    svg("path", { d: `M ${x1} 52 Q ${xm} 6 ${x2} 52`, class: "flecha", "marker-end": `url(#${id})` }, grupo);
+    svg("path", { d: `M ${x1} 134 Q ${xm} 180 ${x2} 134`, class: "flecha", "marker-end": `url(#${id})` }, grupo);
     texto(grupo, { x: xm, y: 20, t: op, clase: "op-flecha" });
     texto(grupo, { x: xm, y: 182, t: op, clase: "op-flecha" });
-  };
-  if (a !== 1) flechas(c[0], c[1], `: ${num(a)}`, "ver2");
-  if (x !== 1) flechas(c[1], c[2], `· ${num(x)}`, "ver3");
+  }
+}
+
+// Directa: lo que se busca arriba, lo que se conoce abajo; los datos = la
+// unidad (vacía al principio) = la situación final, con «?». Paso 1: en la
+// del medio, 1 de la magnitud que se conoce al final. Paso 2: flechas «: a»
+// de la primera a la del medio; paso 3, «· x» de la del medio a la última.
+// Debajo, la recta doble, al mismo ritmo.
+function fraccionesDirecta(g, r) {
+  const { a, b, x, ua, ub, k, y } = r;
+  tresFracciones(g, {
+    id: "punta-directa",
+    textos: [[0, true, con(b, ub)], [0, false, con(a, ua)], [2, false, con(x, ua)],
+      [1, false, con(1, ua), "fuerte ver1"], [1, true, con(k, ub), "ver2"],
+      [2, true, "?", "hasta3"], [2, true, con(y, ub), "fuerte ver3"]],
+    resalte: [2, false, "ver1 hasta2"],
+    flechas: [...(a !== 1 ? [[0, 1, `: ${num(a)}`, "ver2"]] : []), ...(x !== 1 ? [[1, 2, `· ${num(x)}`, "ver3"]] : [])],
+  });
 }
 
 function dibujarDirecta(r) {
@@ -193,30 +201,67 @@ function dibujarDirecta(r) {
 }
 
 // ------------------------------------------------------------------ escala
-// Recta doble: arriba el plano (cm), abajo la realidad (m o km). Lo que se
-// conoce lleva «?» en la otra recta hasta el paso 2.
+// Las tres fracciones de la directa, con el plano arriba y la realidad abajo
+// (como 1 : e). Paso 1: la escala se escribe en la unidad del dato. Paso 2:
+// reducción a 1 de esa unidad (si el dato es del plano, la escala ya lo es:
+// la fracción del medio, igual que la primera, sale tenue). Paso 3: «·
+// medida». Paso 4: el cambio de unidad, con un factor de conversión.
+// Los números van sin redondear (1 : 50 000 en km es 0,00002 km).
+const exacto = v => {
+  const [e, d = ""] = Number(v).toFixed(9).replace(/0+$/, "").replace(/\.$/, "").split(".");
+  return e.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + (d ? "," + d : "");
+};
+const med = (v, u) => `${exacto(v)} ${u}`;
+const NOMBRE_U = { mm: "milímetros", cm: "centímetros", m: "metros", km: "kilómetros" };
+
 function dibujarEscala(r) {
-  const { e, medida, sentido, unidad, f, uno, plano, real } = r;
-  const g = Pasos.lienzo(230);
-  const R = Pasos.rectaDoble(g, { y: 70, max: Math.max(plano, 1) * 1.18, formato: v => `${num(v)} cm` });
-  R.marca(0, con(0, unidad));
-  R.marca(1, con(uno, unidad), "ver1");
-  const buscaReal = sentido === "real";
-  R.marca(plano, buscaReal ? "?" : con(real, unidad), "hasta2", false, buscaReal ? {} : { etiqueta: "?" });
-  R.marca(plano, con(real, unidad), "ver2", true, { repite: true });
-  const nombreU = unidad === "km" ? "kilómetros" : "metros";
-  const e_ = num(e);
-  return [
-    [`La escala 1 : ${e_}`, `<p><b>1 cm</b> del plano son <b>${e_} cm</b> de la realidad: todo se ha dibujado ${e_} veces más pequeño. Arriba, el plano (cm); abajo, la realidad (${unidad}).</p>
-      <p>${buscaReal ? `En el plano mide ${num(medida)} cm. ¿Cuánto mide en la realidad?` : `En la realidad mide ${con(medida, unidad)}. ¿Cuánto mide en el plano?`}</p>`],
-    ["1 cm del plano", `<p>${e_} cm de la realidad, en ${nombreU}: ${e_} : ${num(f)} = <b>${con(uno, unidad)}</b>. ${unidad === "km" ? "De cm a km se divide entre 100 000 (se quitan cinco ceros)." : "De cm a m se divide entre 100 (se quitan dos ceros)."}</p>
-      <p>Así que <b>1 cm del plano son ${con(uno, unidad)}</b>.</p>`],
-    buscaReal
-      ? ["En la realidad", `<p>Si 1 cm son ${con(uno, unidad)}, ${num(plano)} cm son ${num(plano)} veces más: ${num(plano)} · ${num(uno)} = <b>${con(real, unidad)}</b>.</p>`]
-      : ["En el plano", `<p>¿Cuántas veces caben ${con(uno, unidad)} en ${con(real, unidad)}? ${num(real)} : ${num(uno)} = <b>${num(plano)} cm</b>.</p>`],
-    ["Comprobación", `<p>${num(plano)} cm · ${e_} = ${num(plano * e)} cm de la realidad = ${con(real, unidad)}.</p>
-      <p>Error típico: no cambiar de unidad y dar ${num(plano * e)} como si fueran ${unidad}${buscaReal ? "" : `, o multiplicar en lugar de dividir`}.</p>`],
+  const { e, medida, sentido, ud, up, medio, y, sol, factor, igual } = r;
+  const deReal = sentido === "plano";     // el dato es de la realidad (abajo)
+  const g = Pasos.lienzo(factor ? 300 : 200);
+  const e_ = exacto(e), dato = med(medida, ud), res = med(y, ud);
+  tresFracciones(g, {
+    id: "punta-escala", media: 82,
+    textos: [[0, true, "1", "hasta1"], [0, false, e_, "hasta1"], [0, true, med(1, ud), "ver1"], [0, false, med(e, ud), "ver1"],
+      [2, !deReal, dato], [2, deReal, "?", "hasta3"], [2, deReal, res, "fuerte ver3"],
+      [1, !deReal, med(1, ud), igual ? "ver2 tenue" : "fuerte ver2"], [1, deReal, med(deReal ? medio[0] : medio[1], ud), igual ? "ver2 tenue" : "ver2"]],
+    resalte: [2, !deReal, "ver1 hasta2"],
+    flechas: [...(igual ? [] : [[0, 1, `: ${e_}`, "ver2"]]), ...(medida !== 1 ? [[1, 2, `· ${exacto(medida)}`, "ver3"]] : [])],
+  });
+  // Cambio de unidad: y ud · (n up / d ud) = sol up, con ud tachada.
+  if (factor) {
+    const [n, un, d, ud_] = factor, fila = svg("g", { class: "ver4" }, g), raya = 250;
+    const conUnidad = (x, yy, v, u, tachar, ancla = "middle", clase = "") => {
+      const t = texto(fila, { x, y: yy, t: exacto(v) + " ", clase: "frac-dir " + clase });
+      t.setAttribute("style", `text-anchor: ${ancla}`);     // .frac-dir centra
+
+      svg("tspan", { class: tachar ? "tachado" : "" }, t).textContent = u;
+    };
+    conUnidad(330, raya + 8, y, ud, true, "end");
+    texto(fila, { x: 355, y: raya + 8, t: "·", clase: "frac-dir" });
+    svg("line", { x1: 382, y1: raya, x2: 528, y2: raya, class: "raya-frac" }, fila);
+    conUnidad(455, raya - 14, n, un, false);
+    conUnidad(455, raya + 29, d, ud_, true);
+    texto(fila, { x: 556, y: raya + 8, t: "=", clase: "frac-dir" });
+    conUnidad(582, raya + 8, sol, up, false, "start", "fuerte");
+  }
+  const lado = deReal ? "abajo, la realidad" : "arriba, el plano";
+  const pasos = [
+    [`La escala 1 : ${e_}`, `<p>1 : ${e_} es la fracción ${Pasos.frac("1", e_)}: <b>1</b> del plano son <b>${e_}</b> de la realidad, en la misma unidad. Arriba va el plano y abajo la realidad, en el mismo orden que la escala.</p>
+      <p>Al final, lo que conocemos: ${deReal ? `en la realidad mide ${dato}` : `en el plano mide ${dato}`}, y «?» ${deReal ? "en el plano" : "en la realidad"}. En medio, una fracción vacía.</p>`],
+    [`En ${ud}`, `<p>El dato está en <b>${ud}</b> (${lado}), así que la escala también la escribimos en ${ud}: ${Pasos.frac(med(1, ud), med(e, ud))}.</p>`],
+    igual
+      ? ["Reducción a la unidad", `<p>Conocemos el plano, así que en la del medio va <b>${med(1, ud)} del plano</b>. Pero la escala ya es de ${med(1, ud)} del plano: la fracción del medio es la misma que la primera y no hay que dividir.</p>`]
+      : [`Dividimos entre ${e_}`, `<p>Conocemos la realidad, así que en la del medio va <b>${med(1, ud)} de la realidad</b>, abajo. De ${med(e, ud)} a ${med(1, ud)} dividimos entre ${e_}; lo que hacemos abajo, lo hacemos arriba: 1 : ${e_} = <b>${med(medio[0], ud)}</b> del plano.</p>`],
+    [`Multiplicamos por ${exacto(medida)}`, `<p>De ${med(1, ud)} a ${dato}, multiplicamos por ${exacto(medida)}, abajo y arriba: ${exacto(deReal ? medio[0] : e)} · ${exacto(medida)} = <b>${res}</b> ${deReal ? "en el plano" : "en la realidad"}.</p>`],
   ];
+  if (factor) {
+    const [n, un, d, ud_] = factor;
+    pasos.push([`De ${ud} a ${up}`, `<p>Nos lo piden en <b>${NOMBRE_U[up]}</b>. Multiplicamos por un factor de conversión, ${Pasos.frac(med(n, un), med(d, ud_))}, que vale 1 porque ${med(n, un)} = ${med(d, ud_)}. Los ${ud} se van:</p>
+      <p>${res} · ${Pasos.frac(med(n, un), med(d, ud_))} = <b>${med(sol, up)}</b>.</p>`]);
+  } else pasos.push(["La unidad", `<p>Nos lo piden en ${NOMBRE_U[up]}, la misma unidad del dato: la respuesta es <b>${med(sol, up)}</b>.</p>`]);
+  pasos.push(["Comprobación", `<p>En la misma unidad, la realidad es ${e_} veces el plano: ${deReal ? `${res} · ${e_} = ${dato}` : `${dato} · ${e_} = ${res}`}.</p>` +
+    (factor ? `<p>Error típico: no cambiar de unidad y dar ${exacto(y)} como si fueran ${up}.</p>` : "")]);
+  return pasos;
 }
 
 // ------------------------------------------------------------------ inversa
@@ -480,7 +525,7 @@ function dibujarOferta(r) {
 
 const MODOS = {
   directa: { campos: { a: "da", ua: "dua", b: "db", ub: "dub", x: "dx" }, dibujar: dibujarDirecta },
-  escala: { campos: { e: "ee", sentido: "es", medida: "em", unidad: "eu" }, dibujar: dibujarEscala },
+  escala: { campos: { e: "ee", sentido: "es", medida: "em", ud: "eud", up: "eup" }, dibujar: dibujarEscala },
   inversa: { campos: { a: "ia", ua: "iua", b: "ib", ub: "iub", x: "ix" }, dibujar: dibujarInversa },
   tabla: { campos: { ux: "tux", x: "tx", uy: "tuy", y: "ty" }, dibujar: dibujarTabla },
   reparto: { campos: { p1: "r1", p2: "r2", p3: "r3", total: "rt", nombres: "rn" }, dibujar: dibujarReparto },
