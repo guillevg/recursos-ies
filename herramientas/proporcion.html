@@ -59,6 +59,7 @@
   .punta { fill: var(--rojo); }
   .op-flecha { font-size: 21px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
   .frac-dir.tenue { fill-opacity: .35; }
+  .nombre-frac { font-size: 16px; text-anchor: middle; fill: var(--suave); font-weight: 700; }
   .tachado { text-decoration: line-through; fill: var(--rojo); }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
@@ -132,28 +133,30 @@ const singular = u => /[lnrdj]es$/.test(u) ? u.slice(0, -2) : /ces$/.test(u) ? u
 const con = (v, u) => u ? `${num(v)} ${v === 1 ? singular(u) : u}` : num(v);
 
 // ------------------------------------------------------------------ directa
-// Tres fracciones iguales (directa y escalas) en las columnas 170, 400 y 630.
-// `textos`: [columna, ¿arriba?, texto, clase]; `resalte`: [columna, ¿arriba?,
-// clase], el recuadro de lo que se conoce; `flechas`: [de, a, operación,
-// clase], curvas por encima de los numeradores y por debajo de los
-// denominadores. `media`: media anchura de cada raya.
-function tresFracciones(g, { textos, resalte, flechas, id, media = 72 }) {
-  const c = [170, 400, 630], arriba = 78, raya = 92, abajo = 121, hueco = 46;
+// Fracciones iguales en cadena (directa, escalas y reparto), por defecto
+// tres en las columnas 170, 400 y 630 (`c`: otras columnas). `textos`:
+// [columna, ¿arriba?, texto, clase]; `resalte`: [columna, ¿arriba?, clase],
+// el recuadro de lo que se conoce; `flechas`: [de, a, operación, clase,
+// nivel], curvas por encima de los numeradores y por debajo de los
+// denominadores (con nivel 1, 2… más altas, para saltar fracciones).
+// `media`: media anchura de cada raya; `dy`: desplazamiento vertical.
+function cadenaFracciones(lienzo, { textos, resalte, flechas, id, media = 72, c = [170, 400, 630], dy = 0 }) {
+  const g = svg("g", { transform: `translate(0 ${dy})` }, lienzo), arriba = 78, raya = 92, abajo = 121, hueco = 46;
   const punta = svg("marker", { id, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" }, svg("defs", {}, g));
   svg("path", { d: "M 0 0 L 10 5 L 0 10 Z", class: "punta" }, punta);
   for (const cx of c) svg("line", { x1: cx - media, y1: raya, x2: cx + media, y2: raya, class: "raya-frac" }, g);
-  for (const xx of [(c[0] + c[1]) / 2, (c[1] + c[2]) / 2]) texto(g, { x: xx, y: raya + 8, t: "=", clase: "frac-dir" });
+  for (let k = 1; k < c.length; k++) texto(g, { x: (c[k - 1] + c[k]) / 2, y: raya + 8, t: "=", clase: "frac-dir" });
   for (const [k, sube, t, clase = ""] of textos) texto(g, { x: c[k], y: sube ? arriba : abajo, t, clase: "frac-dir " + clase });
   if (resalte) {
     const [k, sube, clase] = resalte;
     svg("rect", { x: c[k] - media + 10, y: (sube ? arriba : abajo) - 26, width: 2 * media - 20, height: 36, rx: 8, class: "resalte " + clase }, g);
   }
-  for (const [de, a_, op, clase] of flechas) {
-    const grupo = svg("g", { class: clase }, g), x1 = c[de] + hueco, x2 = c[a_] - hueco, xm = (c[de] + c[a_]) / 2;
-    svg("path", { d: `M ${x1} 52 Q ${xm} 6 ${x2} 52`, class: "flecha", "marker-end": `url(#${id})` }, grupo);
-    svg("path", { d: `M ${x1} 134 Q ${xm} 180 ${x2} 134`, class: "flecha", "marker-end": `url(#${id})` }, grupo);
-    texto(grupo, { x: xm, y: 20, t: op, clase: "op-flecha" });
-    texto(grupo, { x: xm, y: 182, t: op, clase: "op-flecha" });
+  for (const [de, a_, op, clase, nivel = 0] of flechas) {
+    const grupo = svg("g", { class: clase }, g), x1 = c[de] + hueco, x2 = c[a_] - hueco, xm = (c[de] + c[a_]) / 2, h = 44 * nivel;
+    svg("path", { d: `M ${x1} 52 Q ${xm} ${6 - h} ${x2} 52`, class: "flecha", "marker-end": `url(#${id})` }, grupo);
+    svg("path", { d: `M ${x1} 134 Q ${xm} ${180 + h} ${x2} 134`, class: "flecha", "marker-end": `url(#${id})` }, grupo);
+    texto(grupo, { x: xm, y: 20 - h / 2, t: op, clase: "op-flecha" });
+    texto(grupo, { x: xm, y: 182 + h / 2, t: op, clase: "op-flecha" });
   }
 }
 
@@ -164,7 +167,7 @@ function tresFracciones(g, { textos, resalte, flechas, id, media = 72 }) {
 // Debajo, la recta doble, al mismo ritmo.
 function fraccionesDirecta(g, r) {
   const { a, b, x, ua, ub, k, y } = r;
-  tresFracciones(g, {
+  cadenaFracciones(g, {
     id: "punta-directa",
     textos: [[0, true, con(b, ub)], [0, false, con(a, ua)], [2, false, con(x, ua)],
       [1, false, con(1, ua), "fuerte ver1"], [1, true, con(k, ub), "ver2"],
@@ -219,7 +222,7 @@ function dibujarEscala(r) {
   const deReal = sentido === "plano";     // el dato es de la realidad (abajo)
   const g = Pasos.lienzo(factor ? 300 : 200);
   const e_ = exacto(e), dato = med(medida, ud), res = med(y, ud);
-  tresFracciones(g, {
+  cadenaFracciones(g, {
     id: "punta-escala", media: 82,
     textos: [[0, true, "1", "hasta1"], [0, false, e_, "hasta1"], [0, true, med(1, ud), "ver1"], [0, false, med(e, ud), "ver1"],
       [2, !deReal, dato], [2, deReal, "?", "hasta3"], [2, deReal, res, "fuerte ver3"],
@@ -364,26 +367,46 @@ function dibujarTabla(r) {
 }
 
 // ------------------------------------------------------------------ reparto
+// Arriba, la reducción a la unidad en cadena: lo que se reparte / partes =
+// lo de 1 parte = una fracción final por persona (? / sus partes). Debajo,
+// una barra por persona, al mismo ritmo: las partes (paso 0), todas juntas
+// (paso 1), lo que vale una (paso 2) y lo de cada uno, una persona por paso
+// (3, 4, 5), con su flecha sola (más alta cuanto más lejos).
 function dibujarReparto(r) {
   const { ps, total, suma, u, cada, nombres } = r;
-  const g = Pasos.lienzo(110 + ps.length * 80);
+  const FR = 300;      // alto de la cadena de fracciones
+  const g = Pasos.lienzo(FR + 110 + ps.length * 80);
+  const partes = p => `${num(p)} ${p === 1 ? "parte" : "partes"}`;
+  const n = ps.length + 2, c = Array.from({ length: n }, (_, k) => 70 + k * 660 / (n - 1)), media = Math.min(72, 330 / (n - 1) - 20);
+  cadenaFracciones(g, {
+    id: "punta-reparto", c, media, dy: 56,
+    textos: [[0, true, num(total), "ver1"], [0, false, partes(suma), "ver1"],
+      [1, false, partes(1), "fuerte ver2"], [1, true, num(u), "ver2"],
+      ...ps.flatMap((p, i) => [[i + 2, false, partes(p)], [i + 2, true, "?", `hasta${3 + i}`], [i + 2, true, num(cada[i]), `fuerte ver${3 + i}`]])],
+    flechas: [[0, 1, `: ${num(suma)}`, "ver2"], ...ps.map((p, i) => [1, i + 2, `· ${num(p)}`, `ver${3 + i} hasta${4 + i}`, i]).filter(f => ps[f[1] - 2] !== 1)],
+  });
+  ps.forEach((_, i) => texto(g, { x: c[i + 2], y: 56 + 152, t: nombres[i], clase: "nombre-frac" }));
   const xi = X0 + 130, w = Math.min(60, (ANCHO - 280) / Math.max(...ps));
   const colores = ["azul", "naranja", "gris"];
   ps.forEach((p, i) => {
-    const y = 60 + i * 80;
+    const y = FR + 60 + i * 80;
     texto(g, { x: xi - 14, y: y + 34, t: nombres[i], clase: "nombre-fila", ancla: "end" });
     const pw = Pasos.barra(g, { x: xi, y, w: p * w, partes: p, color: () => colores[i] });
     Pasos.valores(g, { x: xi, y, p: pw, desde: 0, hasta: p, texto: num(u), clase: "ver2" });
-    texto(g, { x: xi + p * w + 14, y: y + 34, t: `${p} ${p === 1 ? "parte" : "partes"}`, clase: "etq-lado hasta3", ancla: "start" });
-    texto(g, { x: xi + p * w + 14, y: y + 34, t: `${p} · ${num(u)} = ${num(cada[i])}`, clase: "total-fila ver3", ancla: "start" });
+    texto(g, { x: xi + p * w + 14, y: y + 34, t: partes(p), clase: `etq-lado hasta${3 + i}`, ancla: "start" });
+    texto(g, { x: xi + p * w + 14, y: y + 34, t: `${p} · ${num(u)} = ${num(cada[i])}`, clase: `total-fila ver${3 + i}`, ancla: "start" });
   });
-  texto(g, { x: 400, y: 30, t: `En total, ${suma} partes = ${num(total)}`, clase: "grande ver1" });
+  texto(g, { x: 400, y: FR + 30, t: `En total, ${suma} partes = ${num(total)}`, clase: "grande ver1" });
   return [
-    ["Las partes", `<p>Cada uno recibe en proporción a lo que le corresponde: ${ps.map((p, i) => `${nombres[i]}, ${p}`).join("; ")}. Dibujamos una barra por persona, con trozos iguales.</p>`],
-    ["Todas las partes juntas", `<p>Entre todos hay ${ps.join(" + ")} = <b>${suma}</b> partes iguales, que son el total: ${num(total)}.</p>`],
-    ["Una parte", `<p>Cada parte vale ${num(total)} : ${suma} = <b>${num(u)}</b>.</p>`],
-    ["Lo de cada uno", `<p>${ps.map((p, i) => `${nombres[i]}: ${p} · ${num(u)} = <b>${num(cada[i])}</b>`).join("; ")}.</p>
-      <p>Comprobación: ${cada.map(num).join(" + ")} = ${num(total)}. Error típico: repartir a partes iguales (${num(total / ps.length)} cada uno).</p>`],
+    ["Las partes", `<p>Cada uno recibe en proporción a lo que le corresponde: ${ps.map((p, i) => `${nombres[i]}, ${p}`).join("; ")}. Dibujamos una barra por persona, con trozos iguales.</p>
+      <p>Arriba, al final, una fracción por persona: lo que recibe (?) entre sus partes. En medio, una fracción vacía: ahí pasaremos por 1 parte.</p>`],
+    ["Todas las partes juntas", `<p>Entre todos hay ${ps.join(" + ")} = <b>${suma}</b> partes iguales, que son el total: ${Pasos.frac(num(total), partes(suma))}.</p>`],
+    ["Una parte", `<p>De ${partes(suma)} a 1 parte, dividimos entre ${suma}, abajo y arriba: ${num(total)} : ${suma} = <b>${num(u)}</b>. Es lo que vale cada trozo de las barras.</p>`],
+    ...ps.map((p, i) => [`Lo de ${nombres[i]}`, p === 1
+      ? `<p>${nombres[i]} tiene 1 parte: lo que vale una, <b>${num(cada[i])}</b>.</p>`
+      : `<p>De 1 parte a ${partes(p)}, multiplicamos por ${p}, abajo y arriba: ${p} · ${num(u)} = <b>${num(cada[i])}</b>.</p>`]),
+    ["Comprobación", `<p>${ps.map((p, i) => `${nombres[i]}, <b>${num(cada[i])}</b>`).join("; ")}. Entre todos: ${cada.map(num).join(" + ")} = ${num(total)}.</p>
+      <p>Error típico: repartir a partes iguales (${num(total / ps.length)} cada uno).</p>`],
   ];
 }
 

@@ -42,6 +42,26 @@
   .rotulo.fuerte { font-weight: 700; font-size: 21px; }
   .veces { font-size: 22px; text-anchor: middle; fill: var(--rojo); font-weight: 700; }
   .muesca { stroke: var(--tinta); stroke-width: 2; }
+  /* Cuadraditos y cubitos que van llegando: .anK entra en el paso K, cada
+     pieza con su retraso (--d), para ver cómo se cubre o se llena */
+  .an { opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .s1 .an1, .s2 .an2, .s3 .an3, .s4 .an4 { animation: entra 0.35s ease-out both; animation-delay: var(--d, 0ms); }
+  @keyframes entra { from { opacity: 0; transform: translateY(-18px) scale(0.7); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .an { animation-duration: 1ms !important; animation-delay: 0ms !important; } }
+  .cuad { stroke: var(--tinta); stroke-width: 1; }
+  .cuad.azul { fill: var(--azul); }
+  .cuad.naranja { fill: var(--naranja); }
+  .hueco { fill: var(--fondo-alt); stroke: none; }
+  .oculta { fill: none; stroke: var(--suave); stroke-width: 1.5; stroke-dasharray: 6 5; }
+  .arista { fill: none; stroke: var(--tinta); stroke-width: 2.5; stroke-linejoin: round; }
+  .cubito polygon { stroke: var(--tinta); stroke-width: 1; stroke-linejoin: round; }
+  .cubito.azul .f { fill: var(--azul); } .cubito.azul .t { fill: #c3dcec; } .cubito.azul .l { fill: #5b93ba; }
+  .cubito.naranja .f { fill: var(--naranja); } .cubito.naranja .t { fill: #fad79e; } .cubito.naranja .l { fill: #d38d1f; }
+  .med { font-size: 20px; fill: var(--tinta); font-weight: 700; }
+  .cuenta { font-size: 18px; fill: var(--acento); font-weight: 700; }
+  .apunte { font-size: 20px; fill: var(--tinta); }
+  .apunte.fuerte { font-weight: 700; fill: var(--rojo); font-size: 23px; }
+  .perimetro { fill: none; stroke: var(--rojo); stroke-width: 6; stroke-linejoin: round; }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
 <script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
@@ -56,6 +76,8 @@
   <button type="button" role="tab" data-modo="porque">¿Por qué 10, 100 y 1000?</button>
   <button type="button" role="tab" data-modo="cambiar">Cambiar de unidad</button>
   <button type="button" role="tab" data-modo="litros">Volumen y litros</button>
+  <button type="button" role="tab" data-modo="area">Área con cuadraditos</button>
+  <button type="button" role="tab" data-modo="volumen">Volumen con cubitos</button>
 </nav>
 
 <form class="entrada" id="entrada" autocomplete="off">
@@ -73,6 +95,17 @@
     <input id="ln" type="text" inputmode="decimal" size="9" aria-label="Número">
     <select id="ld" aria-label="Unidad de partida"></select>
     a <select id="lh" aria-label="Unidad a la que se pasa"></select>
+  </span>
+  <span data-para="area">
+    <input id="aa" type="number" min="1" max="12" aria-label="Largo"> ×
+    <input id="ab" type="number" min="1" max="10" aria-label="Ancho">
+    <select id="au" aria-label="Unidad de los lados"></select>
+  </span>
+  <span data-para="volumen">
+    <input id="va" class="corto" type="number" min="1" max="8" aria-label="Largo"> ×
+    <input id="vb" class="corto" type="number" min="1" max="8" aria-label="Ancho"> ×
+    <input id="vh" class="corto" type="number" min="1" max="8" aria-label="Alto">
+    <select id="vu" aria-label="Unidad de los lados"><option>cm</option><option>dm</option><option>m</option></select>
   </span>
   <button type="submit" class="principal">Empezar</button>
   <div class="ejemplos" id="ejemplos"></div>
@@ -107,6 +140,7 @@ const GRUPOS = Object.entries(Unidades.ESCALERAS).map(([m, e]) => [e.mide[0].toU
 const GRUPOS_L = [["Volumen", ["m³", "dm³", "cm³"]], ["Capacidad", Unidades.unidades("capacidad")]];
 for (const id of ["cd", "ch"]) opciones(id, GRUPOS);
 for (const id of ["ld", "lh"]) opciones(id, GRUPOS_L);
+document.getElementById("au").innerHTML = Unidades.LADOS.map(u => `<option>${u}</option>`).join("");
 
 const veces = c => ["", "×10", "×100", "×1000"][c];
 const entre = c => [":10", ":100", ":1000"][c - 1];
@@ -306,10 +340,133 @@ function dibujarPorque(r) {
   return pasos;
 }
 
+const NOMBRE = { mm: "milímetro", cm: "centímetro", dm: "decímetro", m: "metro", dam: "decámetro", hm: "hectómetro", km: "kilómetro" };
+
+// Retraso de cada pieza que llega: `orden` piezas en total, en unos `total` ms.
+const retraso = (k, n, total = 3200) => `--d: ${Math.round(k * Math.min(160, total / Math.max(n, 1)))}ms`;
+
+// ------------------------------------------------- área con cuadraditos
+// Un rectángulo de a × b que se cubre de cuadraditos de 1 u de lado: el
+// primero, la primera fila (azul) y las demás filas, de una en una (naranja).
+function dibujarArea(r) {
+  const { a, b, u, n } = r;
+  const g = Pasos.lienzo(400);
+  const t = Math.min(52, 460 / a, 300 / b), W = a * t, H = b * t;
+  const x0 = 310 - W / 2, y0 = 60 + (300 - H) / 2;
+  svg("rect", { x: x0, y: y0, width: W, height: H, class: "hueco" }, g);
+  // Las filas, de arriba abajo; en cada una, los cuadraditos de izquierda a derecha.
+  for (let f = 0; f < b; f++) for (let c = 0; c < a; c++) {
+    const atr = { x: x0 + c * t, y: y0 + f * t, width: t, height: t };
+    if (f === 0 && c === 0) svg("rect", { ...atr, class: "cuad azul ver1" }, g);
+    else if (f === 0) svg("rect", { ...atr, class: "cuad azul an an2", style: retraso(c - 1, a - 1, 1600) }, g);
+    else svg("rect", { ...atr, class: "cuad naranja an an3", style: retraso((f - 1) * a + c, (b - 1) * a) }, g);
+  }
+  // A la derecha de cada fila, la cuenta: a, 2a, 3a…
+  for (let f = 0; f < b; f++) {
+    const fin = f === 0 ? "ver2" : "an an3";
+    const st = f === 0 ? "" : retraso(f * a - 1, (b - 1) * a);
+    svg("text", { x: x0 + W + 16, y: y0 + (f + 0.5) * t + 6, class: `cuenta ${fin}`, style: st }, g).textContent = num(a * (f + 1));
+  }
+  svg("rect", { x: x0, y: y0, width: W, height: H, class: "arista" }, g);
+  svg("rect", { x: x0, y: y0, width: W, height: H, class: "perimetro ver5" }, g);
+  texto(g, { x: x0 + W / 2, y: y0 - 14, t: `${a} ${u}`, clase: "med" });
+  texto(g, { x: x0 - 14, y: y0 + H / 2 + 7, t: `${b} ${u}`, clase: "med", ancla: "end" });
+  // Leyenda y cuentas, a la derecha.
+  const xa = 625, ap = (y, t, clase) => texto(g, { x: xa, y, t, clase: "apunte " + clase, ancla: "start" });
+  svg("rect", { x: xa, y: 72, width: 28, height: 28, class: "cuad azul ver1" }, g);
+  ap(93, `= 1 ${u}²`, "ver1").setAttribute("x", xa + 38);
+  ap(160, `Una fila: ${a}`, "ver2");
+  ap(200, `${b} filas: ${a} · ${b}`, "ver3");
+  ap(250, `Área = ${num(n)} ${u}²`, "fuerte ver4");
+  ap(310, `Borde = ${num(2 * (a + b))} ${u}`, "ver5");
+  const forma = a === b ? "cuadrado" : "rectángulo", u2 = `${u}²`;
+  const cuentas = Array.from({ length: Math.min(b, 6) }, (_, k) => num(a * (k + 1))).join(", ") + (b > 6 ? "…" : "");
+  return [
+    [`El ${forma}`, `<p>Un ${forma} de <b>${a} ${u}</b> de largo y <b>${b} ${u}</b> de ancho. Su <b>superficie</b> es lo que ocupa por dentro. Para medirla, contamos cuántos cuadraditos de 1 ${u} de lado caben.</p>`],
+    ["La unidad", `<p>Cada cuadradito tiene 1 ${u} de lado: es <b>1 ${u2}</b> (un ${NOMBRE[u]} cuadrado).</p>`],
+    ["La primera fila", `<p>A lo largo caben <b>${a}</b> cuadraditos: uno por cada ${u} del largo.</p>`],
+    ["Fila a fila", `<p>Caben <b>${b}</b> ${b === 1 ? "fila" : "filas"}, una por cada ${u} del ancho. Contamos de ${a} en ${a}: ${cuentas}</p>`],
+    ["El área", `<p>${b} ${b === 1 ? "fila" : "filas"} de ${a}: ${a} · ${b} = <b>${num(n)} ${u2}</b>.</p><p>No hace falta contar uno a uno: <b>área del ${forma} = largo · ancho</b>.</p>`],
+    ["No es lo mismo que el borde", `<p>El borde (en rojo) es una <b>longitud</b>: ${a} + ${b} + ${a} + ${b} = ${num(2 * (a + b))} ${u}. Es el <b>perímetro</b> y va en ${u}.</p><p>Lo de dentro, el <b>área</b>, va en ${u2}: son cosas distintas.</p>`],
+  ];
+}
+
+// --------------------------------------------------- volumen con cubitos
+// Un prisma de a × b × h (largo, ancho y alto) que se llena de cubitos de
+// 1 u de lado, en perspectiva caballera: el primero, la primera fila y la
+// primera capa (azul), y las capas de encima, de una en una (naranja). Los
+// cubitos se pintan de atrás hacia delante y de abajo arriba, para que cada
+// uno tape a los de detrás; el orden en que llegan va aparte (--d).
+function dibujarVolumen(r) {
+  const { a, b, h, u, capa, v, litros } = r;
+  const g = Pasos.lienzo(460);
+  const q = 0.5 * Math.SQRT1_2;                       // fondo en caballera: la mitad, a 45°
+  const k = Math.min(64, 440 / (a + b * q), 330 / (h + b * q));
+  const ox = 300 - (a + b * q) * k / 2, oy = 400 - (380 - (h + b * q) * k) / 2;
+  // x: largo; y: alto; z: fondo (z = 0, la cara de delante).
+  const P = (x, y, z) => [ox + (x + z * q) * k, oy - (y + z * q) * k];
+  const pol = (padre, pts, clase) => svg("polygon", { points: pts.map(p => P(...p).map(c => c.toFixed(1)).join(",")).join(" "), class: clase }, padre);
+  const lin = (pts, clase) => svg("polyline", { points: pts.map(p => P(...p).map(c => c.toFixed(1)).join(",")).join(" "), class: clase }, g);
+  // La caja vacía: el fondo, la pared de la izquierda y el suelo, y las aristas de detrás.
+  pol(g, [[0, 0, b], [a, 0, b], [a, h, b], [0, h, b]], "hueco");
+  pol(g, [[0, 0, 0], [0, 0, b], [0, h, b], [0, h, 0]], "hueco");
+  pol(g, [[0, 0, 0], [a, 0, 0], [a, 0, b], [0, 0, b]], "hueco");
+  lin([[0, 0, 0], [0, 0, b], [a, 0, b]], "oculta"); lin([[0, 0, b], [0, h, b]], "oculta");
+  const enCapa = a * b;
+  for (let z = b - 1; z >= 0; z--) for (let y = 0; y < h; y++) for (let x = 0; x < a; x++) {
+    // Orden de llegada: la fila de atrás, luego las de delante; luego las capas de encima.
+    const fila = b - 1 - z;
+    let clase, st = "";
+    if (y === 0 && fila === 0 && x === 0) clase = "azul ver1";
+    else if (y === 0 && fila === 0) { clase = "azul an an2"; st = retraso(x - 1, a - 1, 1600); }
+    else if (y === 0) { clase = "azul an an3"; st = retraso((fila - 1) * a + x, enCapa - a, 2400); }
+    else { clase = "naranja an an4"; st = retraso((y - 1) * enCapa + fila * a + x, (h - 1) * enCapa); }
+    const c = svg("g", { class: "cubito " + clase, style: st }, g);
+    pol(c, [[x, y, z], [x + 1, y, z], [x + 1, y + 1, z], [x, y + 1, z]], "f");
+    pol(c, [[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]], "t");
+    pol(c, [[x + 1, y, z], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x + 1, y + 1, z]], "l");
+  }
+  // Las aristas que se ven, por encima de los cubitos.
+  lin([[0, 0, 0], [a, 0, 0], [a, h, 0], [0, h, 0], [0, 0, 0]], "arista");
+  lin([[0, h, 0], [0, h, b], [a, h, b], [a, h, 0]], "arista");
+  lin([[a, 0, 0], [a, 0, b], [a, h, b]], "arista");
+  const [xa_, ya_] = P(a / 2, 0, 0), [xh, yh] = P(0, h / 2, 0), [xb, yb] = P(a, 0, b / 2);
+  texto(g, { x: xa_, y: ya_ + 28, t: `${a} ${u}`, clase: "med" });
+  texto(g, { x: xh - 14, y: yh + 7, t: `${h} ${u}`, clase: "med", ancla: "end" });
+  texto(g, { x: xb + 14, y: yb + 14, t: `${b} ${u}`, clase: "med", ancla: "start" });
+  // Las cuentas, a la derecha.
+  const xa = 650, u3 = `${u}³`;
+  const muestra = svg("g", { class: "cubito azul ver1" }, g);
+  const s = 30, m0 = [xa - 20, 82];
+  const cubo = (pts, clase) => svg("polygon", { points: pts.map(([x, y]) => `${m0[0] + x},${m0[1] + y}`).join(" "), class: clase }, muestra);
+  cubo([[0, 0], [s, 0], [s, s], [0, s]], "f"); cubo([[0, 0], [s, 0], [s + 10, -10], [10, -10]], "t"); cubo([[s, 0], [s + 10, -10], [s + 10, s - 10], [s, s]], "l");
+  texto(g, { x: xa, y: 150, t: `= 1 ${u3}`, clase: "apunte ver1" });
+  texto(g, { x: xa, y: 200, t: `Una fila: ${a}`, clase: "apunte ver2" });
+  texto(g, { x: xa, y: 240, t: `Una capa: ${a} · ${b} = ${num(capa)}`, clase: "apunte ver3" });
+  texto(g, { x: xa, y: 280, t: `${h} capas: ${num(capa)} · ${h}`, clase: "apunte ver4" });
+  texto(g, { x: xa, y: 330, t: `V = ${num(v)} ${u3}`, clase: "apunte fuerte ver5" });
+  const agua = u === "cm" ? `${num(v)} mL` : `${num(litros)} L`;
+  texto(g, { x: xa, y: 380, t: `Caben ${agua}`, clase: "apunte ver6" });
+  const caja = a === b && b === h ? "cubo" : "prisma";
+  return [
+    [`El ${caja}`, `<p>Una caja (un ${caja}) de <b>${a} ${u}</b> de largo, <b>${b} ${u}</b> de ancho y <b>${h} ${u}</b> de alto. Su <b>volumen</b> es el espacio que ocupa por dentro. Para medirlo, contamos cuántos cubitos de 1 ${u} de lado caben.</p>`],
+    ["La unidad", `<p>Cada cubito tiene 1 ${u} de lado: es <b>1 ${u3}</b> (un ${NOMBRE[u]} cúbico).</p>`],
+    ["La primera fila", `<p>A lo largo caben <b>${a}</b> cubitos: uno por cada ${u} del largo.</p>`],
+    ["La primera capa", `<p>En el fondo caben ${b} ${b === 1 ? "fila" : "filas"} de ${a}: ${a} · ${b} = <b>${num(capa)}</b> cubitos. Es como cubrir la base de cuadraditos: el <b>área de la base</b>, ${num(capa)} ${u}².</p>`],
+    ["Capa a capa", `<p>Encima caben <b>${h}</b> ${h === 1 ? "capa" : "capas iguales"}, una por cada ${u} de alto: ${num(capa)} · ${h} = <b>${num(v)}</b> cubitos.</p>`],
+    ["El volumen", `<p>V = largo · ancho · alto = ${a} · ${b} · ${h} = <b>${num(v)} ${u3}</b>.</p><p>Es lo mismo que <b>área de la base · altura</b>: ${num(capa)} · ${h}.</p>`],
+    ["¿Cuánta agua cabe?", u === "cm" ? `<p>Cada cm³ es <b>1 mL</b>: caben ${num(v)} mL${v >= 1000 ? `, es decir, ${num(litros)} L` : ""} (1 L = 1000 cm³).</p>`
+      : u === "dm" ? `<p>Cada dm³ es exactamente <b>1 litro</b> (un brik de leche): caben <b>${num(litros)} L</b>.</p>`
+      : `<p>En cada m³ caben <b>1000 litros</b>: ${num(v)} · 1000 = <b>${num(litros)} L</b>.</p>`],
+  ];
+}
+
 const MODOS = {
   porque: { campos: { pareja: "pp" }, dibujar: dibujarPorque },
   cambiar: { campos: { numero: "cn", desde: "cd", hasta: "ch" }, dibujar: dibujarCambiar },
   litros: { campos: { numero: "ln", desde: "ld", hasta: "lh" }, dibujar: dibujarLitros },
+  area: { campos: { a: "aa", b: "ab", u: "au" }, dibujar: dibujarArea },
+  volumen: { campos: { a: "va", b: "vb", h: "vh", u: "vu" }, dibujar: dibujarVolumen },
 };
 for (const [m, def] of Object.entries(MODOS))
   Object.assign(def, { calcular: Unidades.calcular[m], ejemplos: Unidades.EJEMPLOS[m], azar: () => Unidades.azar(m) });

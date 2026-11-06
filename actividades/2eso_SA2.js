@@ -143,7 +143,7 @@
         titulo: "Reparto proporcional",
         sub: "Quien pone más, recibe más",
         herramienta: ["Reparto proporcional", "proporcion.html#reparto"],
-        pista: "Suma las partes para saber en cuántas partes iguales se divide el total. Calcula cuánto vale una parte y multiplícalo por las partes de cada uno. Al final, comprueba que lo repartido suma el total.",
+        pista: "Suma las partes y escribe el total entre esas partes como fracción. En medio, reduce a 1 parte (divide abajo y arriba); al final, una fracción por persona con «?» entre sus partes (multiplica). Comprueba que lo repartido suma el total.",
         nuevo() {
           const n = Math.random() < .6 ? 3 : 2;
           let ps;
@@ -170,6 +170,7 @@
               return resultado(mal, "Todavía no.", `Una parte vale ${miles(T)} : ${suma}. Multiplica por las partes de cada uno.`);
             },
             operaciones: `<p>Partes: ${ps.join(" + ")} = ${suma}</p>
+                          <p>${F(miles(T), `${suma} partes`)} = ${F(u, "1 parte")} = ${nom.map((x, i) => F(miles(cada[i]), `${ps[i]} ${ps[i] === 1 ? "parte" : "partes"}`)).join(" = ")}</p>
                           <p>Una parte: ${miles(T)} : ${suma} = ${u} ${ctx.unidad}</p>
                           ${nom.map((x, i) => `<p>${x}: ${ps[i]} · ${u} = <b>${miles(cada[i])} ${ctx.unidad}</b></p>`).join("")}
                           <p>Comprobación: ${cada.map(miles).join(" + ")} = ${miles(T)}</p>`,

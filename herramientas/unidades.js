@@ -1,9 +1,10 @@
-// Cambio de unidades paso a paso. Tres modos: por qué cada escalón es ×10 en
+// Cambio de unidades paso a paso. Cinco modos; los tres primeros: por qué cada escalón es ×10 en
 // longitud, ×100 en superficie y ×1000 en volumen (una línea, un cuadrado y
 // un cubo partidos en trozos de la unidad siguiente); cambiar de unidad con
 // la escalera (contar escalones y mover la coma) y pasar de volumen a litros
 // por el puente 1 dm³ = 1 L. Las cifras se tratan como texto, sin redondeos
-// de la coma flotante. Cálculos separados del dibujo para probarlos con Node;
+// de la coma flotante. Además, la superficie de un rectángulo cubriéndolo de
+// cuadraditos y el volumen de un prisma llenándolo de cubitos. Cálculos separados del dibujo para probarlos con Node;
 // el dibujo está en unidades.html. Acompaña al bloque D de la SA1 de 1º PDC.
 "use strict";
 
@@ -103,7 +104,26 @@ const Unidades = (() => {
     return { pareja, g, p, litro: LITRO[pareja] ?? null };
   }
 
-  const calcular = { porque, cambiar, litros };
+  // Superficie de un rectángulo de a × b, contando cuadraditos de 1 u de lado.
+  const LADOS = ["mm", "cm", "dm", "m", "dam", "hm", "km"];
+  const entero = (v, max) => Number.isInteger(v) && v >= 1 && v <= max;
+  function area({ a, b, u }) {
+    if (!entero(a, 12) || !entero(b, 10)) return { error: "Para contar cuadraditos: el largo, un número entero del 1 al 12, y el ancho, del 1 al 10." };
+    if (!LADOS.includes(u)) return { error: "Elige la unidad de los lados." };
+    return { a, b, u, n: a * b };
+  }
+
+  // Volumen de un prisma de a × b de base y h de alto, contando cubitos.
+  // Litros: 1 cm³ = 1 mL, 1 dm³ = 1 L, 1 m³ = 1000 L.
+  const LITROS_DE = { cm: 0.001, dm: 1, m: 1000 };
+  function volumen({ a, b, h, u }) {
+    if (![a, b, h].every(v => entero(v, 8))) return { error: "Para contar cubitos, las tres medidas tienen que ser números enteros del 1 al 8." };
+    if (!(u in LITROS_DE)) return { error: "Elige la unidad: cm, dm o m." };
+    const capa = a * b, v = capa * h;
+    return { a, b, h, u, capa, v, litros: Math.round(v * LITROS_DE[u] * 1000) / 1000 };
+  }
+
+  const calcular = { porque, cambiar, litros, area, volumen };
 
   const EJEMPLOS = {
     porque: [
@@ -127,6 +147,18 @@ const Unidades = (() => {
       { etiqueta: "144 m³ a L", numero: "144", desde: "m³", hasta: "L", texto: "Un aula tiene 144 m³ de aire. ¿Cuántos litros son?" },
       { etiqueta: "250 L a m³", numero: "250", desde: "L", hasta: "m³", texto: "Un bidón tiene 250 L. ¿Qué parte de un metro cúbico es?" },
     ],
+    area: [
+      { etiqueta: "Rectángulo de 6 × 4 cm", a: 6, b: 4, u: "cm", texto: "¿Cuántos cuadraditos de 1 cm de lado hacen falta para cubrir un rectángulo de 6 cm × 4 cm?" },
+      { etiqueta: "Suelo de 8 × 5 m", a: 8, b: 5, u: "m", texto: "El suelo de una habitación mide 8 m × 5 m. ¿Cuántas baldosas de 1 m × 1 m hacen falta?" },
+      { etiqueta: "Cuadrado de 10 × 10 cm", a: 10, b: 10, u: "cm", texto: "Un cuadrado de 1 dm de lado mide 10 cm × 10 cm. ¿Cuántos cm² tiene?" },
+      { etiqueta: "Huerto de 12 × 7 m", a: 12, b: 7, u: "m", texto: "Un huerto rectangular mide 12 m de largo y 7 m de ancho. ¿Cuál es su superficie?" },
+    ],
+    volumen: [
+      { etiqueta: "Caja de 4 × 3 × 2 cm", a: 4, b: 3, h: 2, u: "cm", texto: "¿Cuántos cubitos de 1 cm de lado caben en una caja de 4 cm × 3 cm × 2 cm?" },
+      { etiqueta: "Cubo de 5 cm", a: 5, b: 5, h: 5, u: "cm", texto: "¿Cuántos cubitos de 1 cm de lado hacen falta para construir un cubo de 5 cm de lado?" },
+      { etiqueta: "Pecera de 6 × 3 × 4 dm", a: 6, b: 3, h: 4, u: "dm", texto: "Una pecera mide 6 dm de largo, 3 dm de ancho y 4 dm de alto. ¿Cuántos litros de agua caben?" },
+      { etiqueta: "Aljibe de 4 × 3 × 2 m", a: 4, b: 3, h: 2, u: "m", texto: "Un aljibe mide 4 m × 3 m y tiene 2 m de profundidad. ¿Cuántos m³ caben? ¿Cuántos litros son?" },
+    ],
   };
 
   function azar(modo, r = Math.random) {
@@ -137,6 +169,8 @@ const Unidades = (() => {
       if (t === 1) return `${ent(0, 99)},${ent(1, 9)}`;
       return `${ent(0, 9)},${ent(0, 9)}${ent(1, 9)}`;
     };
+    if (modo === "area") return { a: ent(2, 12), b: ent(2, 8), u: ["cm", "dm", "m"][ent(0, 2)] };
+    if (modo === "volumen") return { a: ent(2, 6), b: ent(2, 5), h: ent(2, 5), u: ["cm", "dm", "m"][ent(0, 2)] };
     if (modo === "porque") return { pareja: ["m-dm", "dm-cm", "cm-mm"][ent(0, 2)] };
     if (modo === "litros") {
       const todas = Object.keys(LITROS);
@@ -152,7 +186,7 @@ const Unidades = (() => {
     return { numero: numero(), desde: us[i], hasta: us[j] };
   }
 
-  return { calcular, EJEMPLOS, azar, leer, escribir, unidades, magnitudDe, ESCALERAS, LITROS, PUENTE, PAREJAS };
+  return { calcular, EJEMPLOS, azar, LADOS, LITROS_DE, leer, escribir, unidades, magnitudDe, ESCALERAS, LITROS, PUENTE, PAREJAS };
 })();
 
 if (typeof module !== "undefined") module.exports = Unidades;

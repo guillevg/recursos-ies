@@ -192,6 +192,68 @@
     return s + `</svg>`;
   }
 
+  // ---------------------------------------------------------- áreas y volúmenes
+  // Como en las presentaciones de superficie y volumen: el área cuenta
+  // cuadraditos (filas de cuadraditos) y el volumen, cubitos (capas de cubitos).
+  // Rectángulo de a × b cuadraditos con sus cotas; resuelto, la primera fila en
+  // naranja y el resto en azul.
+  function areaSVG({ a, b, cotas, resuelto }) {
+    const k = Math.min(40, 440 / a, 230 / b), W = a * k, H = b * k, x0 = 90, y0 = 16;
+    let s = `<svg viewBox="0 0 ${x0 + W + 40} ${y0 + H + 52}" role="img">`;
+    if (resuelto) s += `<rect x="${x0}" y="${y0}" width="${W}" height="${H}" class="c-azul"/><rect x="${x0}" y="${y0}" width="${W}" height="${k}" class="c-naranja"/>`;
+    else s += `<rect x="${x0}" y="${y0}" width="${W}" height="${H}" class="c-blanco"/>`;
+    for (let j = 1; j < a; j++) s += `<line class="corte" style="stroke-width: 1" x1="${x0 + j * k}" y1="${y0}" x2="${x0 + j * k}" y2="${y0 + H}"/>`;
+    for (let i = 1; i < b; i++) s += `<line class="corte" style="stroke-width: 1" x1="${x0}" y1="${y0 + i * k}" x2="${x0 + W}" y2="${y0 + i * k}"/>`;
+    s += `<rect class="borde" x="${x0}" y="${y0}" width="${W}" height="${H}"/>`;
+    s += `<text class="t-llave" x="${x0 + W / 2}" y="${y0 + H + 34}">${cotas[0]}</text>`;
+    s += `<text class="t-llave" x="${x0 - 12}" y="${y0 + H / 2 + 7}" style="text-anchor: end">${cotas[1]}</text>`;
+    return s + `</svg>`;
+  }
+
+  // Caja de a × b × c cubitos en perspectiva caballera (a de largo, b de fondo,
+  // c de alto), con sus cotas. rejilla: las aristas de los cubitos; resuelto,
+  // la capa de arriba en naranja y el resto en azul.
+  function prismaSVG({ a, b, c, cotas, rejilla, resuelto }) {
+    const fx = .45, fy = .32, k = Math.min(48, 430 / (a + fx * b), 230 / (c + fy * b));
+    const x0 = 90, y0 = 18 + (c + fy * b) * k;
+    const pt = (x, y, z) => [x0 + x * k + y * fx * k, y0 - z * k - y * fy * k], P = (...p) => pt(...p).join(",");
+    const cara = (pts, clase) => `<polygon points="${pts.map(p => P(...p)).join(" ")}" class="${clase}"/>`;
+    const linea = (p, q) => { const [x1, y1] = pt(...p), [x2, y2] = pt(...q); return `<line class="corte" style="stroke-width: 1" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; };
+    const abajo = resuelto ? "c-azul" : "c-blanco", arriba = resuelto ? "c-naranja" : "c-blanco";
+    let s = `<svg viewBox="0 0 ${x0 + (a + fx * b) * k + 110} ${y0 + 48}" role="img">`;
+    // Frente y lado derecho: las c − 1 capas de abajo y la de arriba (sus
+    // aristas, con la rejilla); la tapa.
+    const z = resuelto ? c - 1 : c;
+    s += cara([[0, 0, 0], [a, 0, 0], [a, 0, z], [0, 0, z]], abajo) + cara([[0, 0, z], [a, 0, z], [a, 0, c], [0, 0, c]], arriba);
+    s += cara([[a, 0, 0], [a, b, 0], [a, b, z], [a, 0, z]], abajo) + cara([[a, 0, z], [a, b, z], [a, b, c], [a, 0, c]], arriba);
+    s += cara([[0, 0, c], [a, 0, c], [a, b, c], [0, b, c]], arriba);
+    // Sombra del lado derecho, para que se lea el volumen.
+    s += `<polygon points="${[[a, 0, 0], [a, b, 0], [a, b, c], [a, 0, c]].map(p => P(...p)).join(" ")}" style="fill: var(--fg); opacity: .12"/>`;
+    if (rejilla) {
+      for (let x = 1; x < a; x++) s += linea([x, 0, 0], [x, 0, c]) + linea([x, 0, c], [x, b, c]);
+      for (let z = 1; z < c; z++) s += linea([0, 0, z], [a, 0, z]) + linea([a, 0, z], [a, b, z]);
+      for (let y = 1; y < b; y++) s += linea([0, y, c], [a, y, c]) + linea([a, y, c], [a, y, 0]);
+    }
+    for (const pts of [[[0, 0, 0], [a, 0, 0], [a, 0, c], [0, 0, c]], [[a, 0, 0], [a, b, 0], [a, b, c], [a, 0, c]], [[0, 0, c], [a, 0, c], [a, b, c], [0, b, c]]])
+      s += `<polygon points="${pts.map(p => P(...p)).join(" ")}" class="borde"/>`;
+    const [xa, ya] = pt(a / 2, 0, 0), [xc, yc] = pt(0, 0, c / 2), [xb, yb] = pt(a, b / 2, 0);
+    s += `<text class="t-llave" x="${xa}" y="${ya + 32}">${cotas[0]}</text>`;
+    s += `<text class="t-llave" x="${xb + 14}" y="${yb + 20}" style="text-anchor: start">${cotas[1]}</text>`;
+    s += `<text class="t-llave" x="${xc - 12}" y="${yc + 7}" style="text-anchor: end">${cotas[2]}</text>`;
+    return s + `</svg>`;
+  }
+
+  // Comprobación común: número (y unidad, si se pide), y los errores típicos
+  // como [valor, texto, explicación].
+  function comprobarMedida(v, R, u, errores, otra) {
+    const x = num(v.r), nBien = cerca(x, R), uBien = u === null || v.u === u;
+    if (nBien && uBien) return { bien: true, texto: "¡Correcto!", explica: "" };
+    if (nBien) return resultado(["u"], "El número está bien, pero la unidad no.", otra);
+    const mal = uBien ? ["r"] : ["r", "u"];
+    for (const [valor, texto, explica] of errores) if (cerca(x, valor)) return resultado(mal, texto, explica);
+    return resultado(mal, "Todavía no.", "Mira el dibujo: ¿cuántos hay en una fila (o en una capa)? ¿Y cuántas filas (o capas)?");
+  }
+
   const acts = {
     decimales: {
       titulo: "¿Qué decimal es mayor?",
@@ -296,6 +358,92 @@
           },
           operaciones: `<p>De ${desde} a ${hasta}${puente}: ${n} ${n === 1 ? "escalón" : "escalones"} ${baja ? "bajando" : "subiendo"}, ${baja ? "×" : ":"}${factor}.</p>
                         <p>La coma salta ${Math.abs(lugares)} ${Math.abs(lugares) === 1 ? "lugar" : "lugares"} a la ${baja ? "derecha" : "izquierda"}. &nbsp; <b>${D} ${desde} = ${res} ${hasta}</b></p>`,
+        };
+      },
+    },
+
+    medidas: {
+      titulo: "Área y volumen",
+      sub: "Contar cuadraditos y cubitos",
+      herramienta: ["Cambio de unidades paso a paso", "unidades.html#cambiar"],
+      pista: `<ul><li><b>Área</b>: los cuadraditos que cubren la figura. Una fila tiene tantos como el largo, y hay tantas filas como el ancho: largo · ancho. Va en cm², m²…</li>
+             <li><b>Volumen</b>: los cubitos que llenan la caja. Una capa es largo · ancho, y hay tantas capas como el alto: largo · ancho · alto. Va en cm³, m³…</li>
+             <li><b>Litros</b>: 1 dm³ = 1 L y 1 m³ = 1000 L. Si las medidas están en cm, pásalas antes a dm.</li></ul>`,
+      variantes: [["todas", "Mezclados"], ["area", "Área"], ["volumen", "Volumen"], ["litros", "¿Cuántos litros?"]],
+      nuevo(variante = "todas") {
+        const tipo = variante === "todas" ? elegir(["area", "volumen", "litros"]) : variante;
+        const unidad = (id, u) => `<div class="linea-op" style="margin-top: 1.4rem"><span class="op">Se mide en</span>${ELEGIR(id, [u, u + "²", u + "³"].map(x => [x, x]), "Unidad")}</div>`;
+
+        if (tipo === "area") {
+          const u = elegir(["cm", "m"]), cuadrado = azar(1, 4) === 1;
+          let a, b;
+          if (cuadrado) a = b = azar(2, 9);
+          else { a = azar(3, 12); b = azar(2, Math.min(9, a - 1)); }
+          const R = a * b, U = u + "²";
+          const CTX = cuadrado
+            ? [`Calcula el área de un cuadrado de <span class="dato">${a} ${u}</span> de lado.`,
+               u === "m" ? `Un patio cuadrado mide <span class="dato">${a} m</span> de lado. ¿Cuál es su área?` : `Un azulejo cuadrado mide <span class="dato">${a} cm</span> de lado. ¿Cuál es su área?`]
+            : [`Calcula el área de un rectángulo de <span class="dato">${a} ${u}</span> de largo y <span class="dato">${b} ${u}</span> de ancho.`,
+               u === "m" ? `Un huerto rectangular mide <span class="dato">${a} m</span> de largo y <span class="dato">${b} m</span> de ancho. ¿Cuál es su superficie?` : `Una tarjeta mide <span class="dato">${a} cm</span> de largo y <span class="dato">${b} cm</span> de ancho. ¿Cuál es su área?`];
+          return {
+            html: elegir(CTX),
+            dibujo: r => areaSVG({ a, b, cotas: [`${a} ${u}`, `${b} ${u}`], resuelto: r }),
+            trabajo: `<div class="campos">${campo("r", "Área")}</div>${unidad("u", u)}`,
+            _ok: { r: String(R), u: U },
+            comprobar: v => comprobarMedida(v, R, U, [
+              [2 * (a + b), "Eso es el perímetro: lo que mide el borde.", "El área es lo de dentro: cuenta los cuadraditos que cubren la figura."],
+              [a + b, "Has sumado el largo y el ancho.", `Cada fila tiene ${a} cuadraditos y hay ${b} filas: hay que multiplicar.`],
+            ], `El área cuenta cuadraditos de 1 ${u} de lado: se mide en ${U}.`),
+            operaciones: `<p>${b} ${b === 1 ? "fila" : "filas"} de ${a} cuadraditos: ${a} · ${b} = ${R}</p><p><b>Área = ${R} ${U}</b></p>`,
+          };
+        }
+
+        if (tipo === "volumen") {
+          const u = elegir(["cm", "m"]), cubo = azar(1, 4) === 1;
+          let a, b, c;
+          if (cubo) a = b = c = azar(2, 6);
+          else { a = azar(2, 7); b = azar(2, 5); c = azar(2, 5); }
+          const capa = a * b, R = capa * c, U = u + "³";
+          const CTX = cubo
+            ? [`Calcula el volumen de un cubo de <span class="dato">${a} ${u}</span> de lado.`]
+            : (u === "m" ? ["Un contenedor", "Una nave de un almacén"] : ["Una caja", "Un ladrillo de juguete"]).map(q =>
+                `${q} mide <span class="dato">${a} ${u}</span> de largo, <span class="dato">${b} ${u}</span> de ancho y <span class="dato">${c} ${u}</span> de alto. ¿Cuál es su volumen?`);
+          return {
+            html: elegir(CTX),
+            dibujo: r => prismaSVG({ a, b, c, cotas: [`${a} ${u}`, `${b} ${u}`, `${c} ${u}`], rejilla: true, resuelto: r }),
+            trabajo: `<div class="campos">${campo("r", "Volumen")}</div>${unidad("u", u)}`,
+            _ok: { r: String(R), u: U },
+            comprobar: v => comprobarMedida(v, R, U, [
+              [capa, "Eso es solo una capa: la de abajo.", `Una capa tiene ${a} · ${b} = ${capa} cubitos, y hay ${c} capas.`],
+              [a + b + c, "Has sumado las medidas.", "Cuenta cubitos: una capa es largo · ancho, y luego por el número de capas."],
+              [2 * (a * b + b * c + a * c), "Eso es lo que miden las caras por fuera.", "El volumen cuenta los cubitos que llenan la caja, también los de dentro."],
+            ], `El volumen cuenta cubitos de 1 ${u} de lado: se mide en ${U}.`),
+            operaciones: `<p>Una capa: ${a} · ${b} = ${capa} cubitos. Hay ${c} capas: ${capa} · ${c} = ${R}</p><p><b>Volumen = ${R} ${U}</b></p>`,
+          };
+        }
+
+        // ¿Cuántos litros caben? Medidas en cm (de 10 en 10), en dm o en m.
+        const u = elegir(["cm", "dm", "m"]);
+        const n = u === "m" ? [azar(2, 5), azar(2, 4), azar(2, 3)] : [azar(2, 6), azar(2, 5), azar(2, 5)];
+        const [a, b, c] = n, V = a * b * c, L = u === "m" ? V * 1000 : V;
+        const med = u === "cm" ? n.map(x => x * 10) : n, cotas = med.map(x => `${x} ${u}`);
+        const DIM = `<span class="dato">${med[0]} ${u}</span> de largo, <span class="dato">${med[1]} ${u}</span> de ancho y <span class="dato">${med[2]} ${u}</span> de ${u === "m" ? "hondo" : "alto"}`;
+        const html = u === "m" ? `Un aljibe mide ${DIM}. ¿Cuántos litros de agua caben?`
+          : u === "dm" ? `Un acuario mide ${DIM}. ¿Cuántos litros de agua caben?`
+          : `Una pecera mide ${DIM}. ¿Cuántos litros de agua caben?`;
+        const errores = [[med[0] + med[1] + med[2], "Has sumado las medidas.", "Primero el volumen: largo · ancho · alto."]];
+        if (u === "m") errores.push([V, `Eso son m³: ${V} m³.`, "Cada m³ son 1000 litros."]);
+        if (u === "cm") errores.push([V * 1000, `Eso son cm³: ${miles(V * 1000)} cm³, o sea, mL.`, "Para tener litros, pasa antes las medidas a dm (1 dm³ = 1 L), o divide los cm³ entre 1000."],
+                                     [V * 1000000, "Te has pasado de ceros.", "Pasa las medidas a dm antes de multiplicar: 1 dm³ = 1 L."]);
+        const pasoDm = u === "cm" ? `<p>En dm, porque 1 dm³ = 1 L: ${med.map((x, i) => `${x} cm = ${n[i]} dm`).join("; ")}.</p>` : "";
+        return {
+          html,
+          dibujo: r => prismaSVG({ a, b, c, cotas, rejilla: r, resuelto: r }),
+          campos: [{ id: "r", etiqueta: "Litros (L)" }],
+          _ok: { r: String(L) },
+          comprobar: v => comprobarMedida(v, L, null, errores, ""),
+          operaciones: `${pasoDm}<p>Volumen: ${a} · ${b} · ${c} = ${V} ${u === "m" ? "m³" : "dm³"}</p>
+                        <p>${u === "m" ? `Cada m³ son 1000 L: ${V} · 1000 = ${miles(L)}` : `Cada dm³ es 1 L`}. &nbsp; <b>Caben ${miles(L)} L</b></p>`,
         };
       },
     },
@@ -456,7 +604,7 @@
       A: ["decimales", "redondeo", "fracciones"],
       B: ["pcde", "pcque", "queme"],
       C: ["kilo", "unidad"],
-      D: ["unidades"],
+      D: ["unidades", "medidas"],
     },
     actividades: acts,
   });
