@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apagar luces</title>
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800">
+<link rel="stylesheet" href="comun.css">
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 1rem;
+  }
+  /* El selector va abajo; el tablero queda centrado en el espacio libre */
+  #tablero, .config { margin-top: auto; }
+  .config { display: flex; justify-content: center; }
+  .contador {
+    display: flex; align-items: center; gap: .25rem;
+    background: var(--tarjeta); border: 2px solid var(--linea);
+    border-radius: 1rem; padding: .25rem;
+  }
+  .contador output { min-width: 2ch; text-align: center; font-size: 1.75rem; font-weight: 800; }
+  .contador .rejilla { width: 2.25rem; height: 2.25rem; margin: 0 .25rem; }
+
+  #tablero {
+    --c: min(7rem, calc((100vw - 2rem) / var(--n)), calc((100vh - 18rem) / var(--n)));
+    display: grid;
+    grid-template-columns: repeat(var(--n), var(--c));
+    grid-auto-rows: var(--c);
+  }
+  .luz {
+    border: none; padding: 0; background: none;
+    display: grid; place-items: center;
+    cursor: pointer;
+  }
+  .luz::after {
+    content: ""; width: 88%; height: 88%; border-radius: 18%;
+    background: var(--hueco);
+    transition: background-color .15s, box-shadow .15s;
+  }
+  .luz.on::after {
+    background: var(--luz);
+    box-shadow: inset 0 0 0 calc(var(--c) * .04) var(--luz-borde);
+  }
+  .luz.fiesta::after { animation: bote .4s ease-in-out var(--retraso); }
+  @keyframes bote { 50% { transform: scale(.75); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .luz::after { transition: none; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <a class="icono" href="index.html" title="Inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+  </a>
+  <h1>Apagar luces</h1>
+  <button class="icono" data-abre="ayuda" title="Instrucciones">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
+  </button>
+  <button class="icono" id="deshacer" title="Deshacer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+  </button>
+  <button class="icono" id="reiniciar" title="Empezar de nuevo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+  </button>
+  <button class="icono" id="pantalla" title="Pantalla completa">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+  </button>
+</header>
+
+<main>
+  <div id="tablero"></div>
+
+  <div class="config">
+    <div class="contador">
+      <button class="icono" data-d="-1" title="Tablero más pequeño">−</button>
+      <svg class="rejilla" viewBox="0 0 24 24" aria-hidden="true">
+        <g fill="var(--luz)"><rect x="2" y="2" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/><rect x="16" y="2" width="6" height="6" rx="1.2"/><rect x="9" y="16" width="6" height="6" rx="1.2"/></g>
+        <g fill="var(--hueco)"><rect x="9" y="2" width="6" height="6" rx="1.2"/><rect x="2" y="9" width="6" height="6" rx="1.2"/><rect x="16" y="9" width="6" height="6" rx="1.2"/><rect x="2" y="16" width="6" height="6" rx="1.2"/><rect x="16" y="16" width="6" height="6" rx="1.2"/></g>
+      </svg>
+      <output id="n">5</output>
+      <button class="icono" data-d="1" title="Tablero más grande">+</button>
+    </div>
+  </div>
+</main>
+
+<dialog id="ayuda" class="instrucciones">
+  <div class="cab-dialogo">
+    <h2>Apagar luces</h2>
+    <button class="icono" data-cierra title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <p><b>Objetivo:</b> apagar todas las luces.</p>
+  <ul>
+    <li>Al tocar una casilla, cambian ella y sus vecinas de arriba, abajo, izquierda y derecha.</li>
+    <li>Las encendidas se apagan y las apagadas se encienden.</li>
+  </ul>
+  <p><b>Para pensar:</b> ¿importa el orden en que tocas las casillas? ¿Qué pasa si tocas dos veces la misma? ¿Cuántos toques hacen falta como mínimo?</p>
+</dialog>
+
+<script src="comun.js"></script>
+<script>
+// Se empieza con todo encendido, que siempre tiene solución.
+// Toques mínimos: 3 → 5, 4 → 4, 5 → 15, 6 → 28, 7 → 33.
+const MIN = 3, MAX = 7;
+const VECINAS = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+
+let n = 5;
+let luces = [];      // luces[i][j]: true si está encendida
+let historial = [];  // casillas tocadas; tocar otra vez la misma lo deshace
+
+const $ = id => document.getElementById(id);
+const elTablero = $("tablero");
+let elLuces = [];
+
+function nuevo() {
+  luces = [...Array(n)].map(() => Array(n).fill(true));
+  historial = [];
+  montar();
+}
+
+function montar() {
+  elTablero.innerHTML = "";
+  elTablero.style.setProperty("--n", n);
+  elLuces = luces.map((fila, i) => fila.map((_, j) => {
+    const b = document.createElement("button");
+    b.className = "luz";
+    b.setAttribute("aria-label", `Casilla ${i + 1}-${j + 1}`);
+    b.addEventListener("click", () => tocar(i, j));
+    b.addEventListener("animationend", () => b.classList.remove("fiesta"));
+    elTablero.append(b);
+    return b;
+  }));
+  pintar();
+}
+
+function pintar() {
+  elLuces.forEach((fila, i) => fila.forEach((b, j) => b.classList.toggle("on", luces[i][j])));
+  $("n").textContent = n;
+  $("deshacer").disabled = historial.length === 0;
+  document.querySelectorAll(".contador button").forEach(b => {
+    const v = n + Number(b.dataset.d);
+    b.disabled = v < MIN || v > MAX;
+  });
+}
+
+function cambiar(i, j) {
+  for (const [di, dj] of VECINAS) {
+    const a = i + di, b = j + dj;
+    if (a >= 0 && a < n && b >= 0 && b < n) luces[a][b] = !luces[a][b];
+  }
+}
+
+const apagado = () => luces.every(fila => fila.every(x => !x));
+
+function tocar(i, j) {
+  if (apagado()) return;
+  cambiar(i, j);
+  historial.push([i, j]);
+  pintar();
+  if (apagado()) fiesta(i, j);
+}
+
+// Una onda que sale de la última casilla tocada
+function fiesta(i0, j0) {
+  elLuces.forEach((fila, i) => fila.forEach((b, j) => {
+    b.style.setProperty("--retraso", `${200 + 70 * (Math.abs(i - i0) + Math.abs(j - j0))}ms`);
+    b.classList.add("fiesta");
+  }));
+}
+
+function deshacer() {
+  const t = historial.pop();
+  if (!t) return;
+  cambiar(...t);
+  elLuces.flat().forEach(b => b.classList.remove("fiesta"));
+  pintar();
+}
+
+// Controles
+document.querySelectorAll(".contador button").forEach(b =>
+  b.addEventListener("click", () => {
+    const v = n + Number(b.dataset.d);
+    if (v < MIN || v > MAX) return;
+    n = v;
+    nuevo();
+  }));
+$("deshacer").addEventListener("click", deshacer);
+$("reiniciar").addEventListener("click", nuevo);
+$("pantalla").addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.();
+});
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); deshacer(); }
+});
+
+nuevo();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+:root {
+  --fondo: #f6f4ee;
+  --tinta: #22302a;
+  --suave: #6b766f;
+  --linea: #dcd8cc;
+  --hueco: #e4e0d6;
+  --tarjeta: #ffffff;
+  --acento: #2f6f8f;
+  --rana-a: #3d8b4f;
+  --rana-b: #d9822b;
+  --ficha: #d9822b;
+  --ficha-borde: #a85f1c;
+  --luz: #f2c14e;
+  --luz-borde: #c99a2e;
+  --nenufar: #cfe3c6;
+  --agua: #e3eef0;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: "Figtree", system-ui, sans-serif;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button { font: inherit; color: inherit; }
+
+.barra {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .75rem 1rem;
+}
+.barra h1 { font-size: 1.5rem; font-weight: 800; margin: 0; flex: 1; }
+
+.icono {
+  display: inline-grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: none;
+  border-radius: .9rem;
+  background: transparent;
+  color: var(--tinta);
+  cursor: pointer;
+  text-decoration: none;
+}
+.icono:hover { background: var(--linea); }
+.icono:active { transform: scale(.94); }
+.icono svg { width: 1.75rem; height: 1.75rem; }
+.icono[disabled] { opacity: .3; cursor: default; background: transparent; }
+
+/* Ventanas modales (instrucciones, tablas…): se abren con [data-abre] desde comun.js */
+dialog {
+  border: none; border-radius: 1.25rem; padding: 1.5rem;
+  background: var(--tarjeta); color: var(--tinta);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / .25);
+  max-width: min(40rem, calc(100vw - 2rem));
+}
+dialog::backdrop { background: rgb(0 0 0 / .3); }
+.cab-dialogo { display: flex; justify-content: flex-end; align-items: center; gap: .25rem; margin: -.75rem -.75rem .5rem 0; }
+.cab-dialogo h2 { flex: 1; margin: 0; }
+
+/* Instrucciones: letra grande para leerla en la pantalla del aula */
+.instrucciones { font-size: 1.35rem; line-height: 1.45; }
+.instrucciones h2 { font-size: 1.75rem; font-weight: 800; }
+.instrucciones ul { padding-left: 1.25em; margin: .75rem 0; }
+.instrucciones li { margin: .4rem 0; }
+.instrucciones p { margin: .75rem 0; }

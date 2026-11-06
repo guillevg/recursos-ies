@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salto de rana</title>
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800">
+<link rel="stylesheet" href="comun.css">
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 1rem;
+  }
+
+  /* Cuántas ranas de cada color (siempre las mismas) */
+  /* El selector va abajo; el tablero queda centrado en el espacio libre */
+  #tablero, .config { margin-top: auto; }
+  .config { display: flex; gap: 2.5rem; flex-wrap: wrap; justify-content: center; }
+  .contador {
+    display: flex; align-items: center; gap: .25rem;
+    background: var(--tarjeta); border: 2px solid var(--linea);
+    border-radius: 1rem; padding: .25rem;
+  }
+  .contador .ficha { margin: 0 .25rem; }
+  .contador output { min-width: 2ch; text-align: center; font-size: 1.75rem; font-weight: 800; }
+
+  /* Tablero */
+  #tablero {
+    /* --c: casilla; el tablero es solo la fila de casillas, sin fondo */
+    --c: min(9rem, calc((100vw - 2rem) / var(--n)), calc(100vh - 18rem));
+    position: relative;
+    width: calc(var(--c) * var(--n));
+    height: var(--c);
+  }
+  .nenufar {
+    position: absolute;
+    left: calc(var(--i) * var(--c));
+    top: 0;
+    width: var(--c); height: var(--c);
+    border: none; padding: 0; background: none;
+    display: grid; place-items: center;
+    cursor: pointer;
+  }
+  /* Nenúfar pixel art; la casilla de origen y la de destino llevan su versión con borde */
+  .nenufar::before {
+    content: "";
+    width: 100%; height: 100%;
+    background: var(--nen) center / 100% 100% no-repeat;
+    image-rendering: pixelated;
+  }
+  .nenufar.origen::before, .nenufar.destino::before { background-image: var(--nen-marcado); }
+
+  .rana {
+    position: absolute;
+    left: calc(var(--i) * var(--c));
+    top: 0;
+    width: var(--c); height: var(--c);
+    border: none; padding: 0; background: none;
+    display: grid; place-items: center;
+    cursor: pointer;
+    will-change: transform;
+    z-index: 1;
+  }
+  .rana img {
+    width: 66%; height: 66%;
+    image-rendering: pixelated;
+    transition: transform .15s;
+    filter: drop-shadow(0 .2rem .15rem rgb(0 0 0 / .18));
+  }
+  .rana.A { color: var(--rana-a); }
+  .rana.B { color: var(--rana-b); }
+  .rana.B img { transform: scaleX(-1); }
+  .rana.salta { z-index: 2; }
+  .rana.no img { animation: no .3s; }
+  .rana.B.no img { animation-name: no-b; }
+  .rana.fiesta img { animation: brinco .5s ease-in-out var(--d) 2; }
+  .rana.B.fiesta img { animation-name: brinco-b; }
+
+  @keyframes brinco   { 50% { transform: translateY(-40%); } }
+  @keyframes brinco-b { 0%, 100% { transform: scaleX(-1); } 50% { transform: translateY(-40%) scaleX(-1); } }
+  @keyframes no   { 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
+  @keyframes no-b { 0%, 100% { transform: scaleX(-1); } 25% { transform: translateX(-6%) scaleX(-1); } 75% { transform: translateX(6%) scaleX(-1); } }
+
+  #aviso { min-height: 2.5rem; font-size: 1.5rem; font-weight: 600; text-align: center; }
+  #aviso.mal { color: #b04a3a; }
+  .icono.destaca { background: #f3d9d3; box-shadow: 0 0 0 .2rem #b04a3a; }
+
+  /* Registro */
+  table { border-collapse: collapse; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+  th, td { padding: .5rem 1.25rem; text-align: center; border-bottom: 1px solid var(--linea); }
+  th svg { width: 2.25rem; height: 2.25rem; vertical-align: middle; }
+  td.vacio { color: var(--suave); font-size: 1.1rem; border: none; padding-top: 1rem; }
+
+  /* Estilo sencillo: solo círculos (huecos grises claros y fichas de color) */
+  .ficha { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; vertical-align: middle; }
+  .ficha img { width: 100%; height: 100%; image-rendering: pixelated; }
+  .sencillo .ficha img { display: none; }
+  .sencillo .ficha::before { content: ""; width: 70%; height: 70%; border-radius: 50%; background: var(--color); }
+  .ficha.A { --color: var(--rana-a); }
+  .ficha.B { --color: var(--rana-b); }
+
+  .sencillo .nenufar::before {
+    width: 84%; height: 84%;
+    border-radius: 50%;
+    background: var(--hueco);
+  }
+  .sencillo .nenufar.origen::before, .sencillo .nenufar.destino::before {
+    background: var(--hueco);
+    box-shadow: inset 0 0 0 .3rem #969c93;
+  }
+  .sencillo .rana img { display: none; }
+  .sencillo .rana::after { content: ""; width: 64%; height: 64%; border-radius: 50%; background: currentColor; }
+  .sencillo .rana.no::after { animation: no .3s; }
+  .sencillo .rana.fiesta::after { animation: brinco .5s ease-in-out var(--d) 2; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rana { transition: none; }
+    .rana img, .rana.no img, .rana.fiesta img, .rana::after { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-salto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 18c3-9 15-9 18 0"/><path d="M17 14l4 4 1-5"/>
+  </symbol>
+  <symbol id="i-paso" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12h14"/><path d="M14 7l5 5-5 5"/>
+  </symbol>
+</svg>
+
+<header class="barra">
+  <a class="icono" href="index.html" title="Inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+  </a>
+  <h1>Salto de rana</h1>
+  <button class="icono" data-abre="ayuda" title="Instrucciones">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
+  </button>
+  <button class="icono" id="deshacer" title="Deshacer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+  </button>
+  <button class="icono" id="reiniciar" title="Empezar de nuevo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+  </button>
+  <button class="icono" id="estilo" title="Cambiar estilo: pixel art o círculos" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M17 3l4 7h-8z"/><path d="M3 21l7-7"/></svg>
+  </button>
+  <button class="icono" id="abrir-registro" data-abre="registro" title="Tabla de resultados">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+  </button>
+  <button class="icono" id="pantalla" title="Pantalla completa">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+  </button>
+</header>
+
+<main>
+  <div id="tablero"></div>
+
+  <div id="aviso"></div>
+
+  <div class="config">
+    <div class="contador">
+      <button class="icono" data-d="-1" title="Menos ranas">−</button>
+      <span class="ficha A"><img data-rana="A" alt=""></span>
+      <output id="n">3</output>
+      <span class="ficha B"><img data-rana="B" alt="" style="transform:scaleX(-1)"></span>
+      <button class="icono" data-d="1" title="Más ranas">+</button>
+    </div>
+  </div>
+</main>
+
+<dialog id="ayuda" class="instrucciones">
+  <div class="cab-dialogo">
+    <h2>Salto de rana</h2>
+    <button class="icono" data-cierra title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <p><b>Objetivo:</b> que las ranas verdes acaben a la derecha y las naranjas a la izquierda.</p>
+  <ul>
+    <li>Cada rana solo avanza hacia delante: las verdes hacia la derecha y las naranjas hacia la izquierda.</li>
+    <li>Una rana puede <b>pasar</b> al nenúfar libre que tiene al lado,</li>
+    <li>o <b>saltar</b> por encima de una rana del otro color, si el nenúfar siguiente está libre.</li>
+    <li>No se puede retroceder ni saltar por encima de dos ranas.</li>
+  </ul>
+  <p>Toca una rana y después el nenúfar al que quieres moverla.</p>
+  <p><b>Para pensar:</b> ¿cuántos movimientos hacen falta con 1, 2, 3… ranas de cada color? ¿Ves algún patrón?</p>
+</dialog>
+
+<dialog id="registro">
+  <div class="cab-dialogo">
+    <button class="icono" id="borrar-registro" title="Borrar la tabla">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg>
+    </button>
+    <button class="icono" data-cierra title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <table>
+    <thead><tr>
+      <th><span class="ficha A"><img data-rana="A" alt=""></span><span class="ficha B"><img data-rana="B" alt="" style="transform:scaleX(-1)"></span></th>
+      <th title="Saltos"><svg><use href="#i-salto"/></svg></th>
+      <th title="Pasos"><svg><use href="#i-paso"/></svg></th>
+      <th>Total</th>
+    </tr></thead>
+    <tbody id="filas"></tbody>
+  </table>
+</dialog>
+
+<script src="comun.js"></script>
+<script>
+// Rana pixel art (variante «Mofletes» de ranas3.js), mirando a la derecha.
+// Se pinta UNA vez por color en un canvas de 16 × 16 y cada ficha es solo esa imagen ampliada.
+// o contorno, k pupila/boca, w blanco, p rosa, g cuerpo, h brillo, d sombra, b tripa
+const PIXELES = [
+  ".........ooooo..",
+  "........owwwwwo.",
+  "........owwkkwo.",
+  "....ooooowwkkwo.",
+  "...ohhhggwwwwwgo",
+  "..ohhggggggggggo",
+  "..ogggggggppkkko",
+  ".ogggggggggbbbo.",
+  ".oggdddgggbbbbo.",
+  ".ogddddddgbbbo..",
+  ".oddddddgo.ogo..",
+  "..oddddo...ogo..",
+  ".oggggggo..oggo.",
+  ".oooooooo..oooo."
+];
+
+function imagenRana(color) {
+  const tono = (mezcla, a) => {
+    const c = color.match(/\w\w/g).map(h => parseInt(h, 16));
+    return "rgb(" + c.map(v => Math.round(v * (1 - a) + mezcla * a)).join(",") + ")";
+  };
+  const PALETA = { o: "#22302a", k: "#22302a", w: "#fff", p: "#f08a8a",
+    g: color, h: tono(255, .35), d: tono(0, .28), b: tono(255, .6) };
+  const lado = Math.max(PIXELES.length, PIXELES[0].length);
+  const lienzo = document.createElement("canvas");
+  lienzo.width = lienzo.height = lado;
+  const ctx = lienzo.getContext("2d");
+  const dy = Math.floor((lado - PIXELES.length) / 2);
+  PIXELES.forEach((fila, y) => [...fila].forEach((ch, x) => {
+    if (!PALETA[ch]) return;
+    ctx.fillStyle = PALETA[ch];
+    ctx.fillRect(x, y + dy, 1, 1);
+  }));
+  return lienzo.toDataURL();
+}
+const css = getComputedStyle(document.documentElement);
+const IMAGEN = {
+  A: imagenRana(css.getPropertyValue("--rana-a").trim() || "#3d8b4f"),
+  B: imagenRana(css.getPropertyValue("--rana-b").trim() || "#d9822b"),
+};
+document.querySelectorAll("img[data-rana]").forEach(img => (img.src = IMAGEN[img.dataset.rana]));
+
+// Nenúfar en perspectiva (diseño «En perspectiva con luz y sombra» de nenufares.js), 24 × 24:
+// hoja elíptica con muesca, canto en sombra debajo y luz en el borde de arriba.
+// La versión «marcada» cambia el borde exterior por un verde oscuro (borde hacia dentro).
+function imagenesNenufar() {
+  const N = 24, C = (N - 1) / 2;
+  const ang = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  const hoja = cy => (x, y) => {
+    const u = (x - C) / 11.2, v = (y - cy) / 5.2, r2 = u * u + v * v;
+    return r2 <= 1 && (r2 <= .02 || ang(Math.atan2(v, u) * 180 / Math.PI, 20) >= 14);
+  };
+  const cara = hoja(16.5), canto = hoja(17.5);
+  const lleno = (x, y) => x >= 0 && y >= 0 && x < N && y < N && (cara(x, y) || canto(x, y));
+  const COLOR = { g: "#a6d38f", d: "#78ad62", h: "#cdeab9", e: "#4f8a43" };
+  const pinta = marcado => {
+    const lienzo = document.createElement("canvas");
+    lienzo.width = lienzo.height = N;
+    const ctx = lienzo.getContext("2d");
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      if (!lleno(x, y)) continue;
+      let c = cara(x, y) ? (lleno(x, y - 1) ? "g" : "h") : "d";
+      if (marcado && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !lleno(x + dx, y + dy))) c = "e";
+      ctx.fillStyle = COLOR[c];
+      ctx.fillRect(x, y, 1, 1);
+    }
+    return `url(${lienzo.toDataURL()})`;
+  };
+  return { normal: pinta(false), marcado: pinta(true) };
+}
+const NENUFAR = imagenesNenufar();
+
+
+const MAX = 6;
+const CLAVE = "minijuegos-rana-registro";
+
+let n = { A: 3, B: 3 };
+let tablero = [];      // cada casilla: null o { id, t: "A" | "B" }
+let historial = [];
+let sel = null;        // índice de la rana elegida
+let saltos = 0, pasos = 0;
+let terminado = false;
+
+const $ = id => document.getElementById(id);
+const elTablero = $("tablero");
+let elRanas = {};
+let elNenufares = [];
+
+// Las verdes (A) avanzan a la derecha y las naranjas (B) a la izquierda.
+// Una rana pasa al nenúfar de al lado si está libre, o salta por encima
+// de una sola rana del otro color si el siguiente está libre.
+function destino(i) {
+  const r = tablero[i];
+  if (!r) return -1;
+  const d = r.t === "A" ? 1 : -1;
+  const a = i + d, b = i + 2 * d;
+  const dentro = k => k >= 0 && k < tablero.length;
+  if (dentro(a) && !tablero[a]) return a;
+  if (dentro(b) && !tablero[b] && tablero[a] && tablero[a].t !== r.t) return b;
+  return -1;
+}
+
+function resuelto() {
+  return tablero.every((r, i) =>
+    i < n.B ? r && r.t === "B" : i === n.B ? !r : r && r.t === "A");
+}
+
+function atascado() {
+  return !resuelto() && tablero.every((_, i) => destino(i) < 0);
+}
+
+function nuevo() {
+  tablero = [];
+  for (let i = 0; i < n.A; i++) tablero.push({ id: "a" + i, t: "A" });
+  tablero.push(null);
+  for (let i = 0; i < n.B; i++) tablero.push({ id: "b" + i, t: "B" });
+  historial = [];
+  sel = null;
+  saltos = pasos = 0;
+  terminado = false;
+  montar();
+}
+
+function montar() {
+  elTablero.innerHTML = "";
+  elTablero.style.setProperty("--n", tablero.length);
+  elTablero.style.setProperty("--nen", NENUFAR.normal);
+  elTablero.style.setProperty("--nen-marcado", NENUFAR.marcado);
+  elRanas = {};
+  elNenufares = tablero.map((_, i) => {
+    const b = document.createElement("button");
+    b.className = "nenufar";
+    b.style.setProperty("--i", i);
+    b.setAttribute("aria-label", "Nenúfar " + (i + 1));
+    b.addEventListener("click", () => tocarNenufar(i));
+    elTablero.append(b);
+    return b;
+  });
+  tablero.forEach(r => {
+    if (!r) return;
+    const b = document.createElement("button");
+    b.className = "rana " + r.t;
+    b.innerHTML = `<img src="${IMAGEN[r.t]}" alt="">`;
+    b.setAttribute("aria-label", r.t === "A" ? "Rana verde" : "Rana naranja");
+    b.addEventListener("click", () => tocarRana(r.id));
+    b.addEventListener("animationend", () => b.classList.remove("salta", "no", "fiesta"));
+    elTablero.append(b);
+    elRanas[r.id] = b;
+  });
+  pintar();
+}
+
+function pintar() {
+  tablero.forEach((r, i) => { if (r) elRanas[r.id].style.setProperty("--i", i); });
+  const dest = sel === null ? -1 : destino(sel);
+  elNenufares.forEach((b, i) => {
+    b.classList.toggle("destino", i === dest);
+    b.classList.toggle("origen", i === sel);
+  });
+
+  $("n").textContent = n.A;
+  $("deshacer").disabled = historial.length === 0;
+  document.querySelectorAll(".contador button").forEach(b => {
+    const v = n.A + Number(b.dataset.d);
+    b.disabled = v < 1 || v > MAX;
+  });
+
+  const aviso = $("aviso");
+  const bloqueo = atascado();
+  aviso.className = bloqueo ? "mal" : "";
+  aviso.textContent = bloqueo ? "No queda ningún movimiento" : "";
+  $("deshacer").classList.toggle("destaca", bloqueo);
+}
+
+function tocarRana(id) {
+  if (terminado) return;
+  const i = tablero.findIndex(r => r && r.id === id);
+  if (sel === i) { sel = null; pintar(); return; }
+  if (destino(i) < 0) {
+    const b = elRanas[id];
+    b.classList.remove("no"); void b.offsetWidth; b.classList.add("no");
+    return;
+  }
+  sel = i;
+  pintar();
+}
+
+function tocarNenufar(j) {
+  if (sel === null || destino(sel) !== j) return;
+  const i = sel;
+  historial.push({ tablero: tablero.slice(), saltos, pasos });
+  const r = tablero[i];
+  tablero[j] = r;
+  tablero[i] = null;
+  const salto = Math.abs(j - i) === 2;
+  if (salto) saltos++; else pasos++;
+  sel = null;
+  if (resuelto()) {
+    terminado = true;
+    anotar();
+    setTimeout(fiesta, 600);
+  }
+  const el = elRanas[r.id];
+  const antes = el.offsetLeft;
+  pintar();
+  animarMovimiento(el, antes - el.offsetLeft, salto);
+}
+
+// La rana ya está en su sitio nuevo; se anima solo con transform desde donde estaba
+// (no obliga a recolocar la página en cada fotograma). El salto es una parábola exacta.
+function animarMovimiento(el, dx, salto) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !el.animate) return;
+  if (!salto) {
+    el.animate([{ transform: `translateX(${dx}px)` }, { transform: "none" }],
+      { duration: 350, easing: "ease-in-out" });
+    return;
+  }
+  const alto = el.offsetHeight * .45, N = 24, frames = [];
+  for (let k = 0; k <= N; k++) {
+    const t = k / N;
+    frames.push({ transform: `translate(${dx * (1 - t)}px, ${-4 * alto * t * (1 - t)}px)` });
+  }
+  el.classList.add("salta");
+  el.animate(frames, { duration: 520, easing: "linear" }).onfinish = () => el.classList.remove("salta");
+}
+
+function deshacer() {
+  const h = historial.pop();
+  if (!h) return;
+  tablero = h.tablero; saltos = h.saltos; pasos = h.pasos;
+  sel = null; terminado = false;
+  pintar();
+}
+
+function fiesta() {
+  tablero.forEach((r, i) => {
+    if (!r) return;
+    const b = elRanas[r.id];
+    b.style.setProperty("--d", (i * 0.08) + "s");
+    b.classList.add("fiesta");
+  });
+}
+
+// Registro de configuraciones resueltas (solo en este navegador)
+function leerRegistro() {
+  try { return JSON.parse(localStorage.getItem(CLAVE)) || {}; } catch { return {}; }
+}
+function guardarRegistro(reg) {
+  try { localStorage.setItem(CLAVE, JSON.stringify(reg)); } catch {}
+}
+let registro = leerRegistro();
+
+function anotar() {
+  registro[n.A + "-" + n.B] = { a: n.A, b: n.B, saltos, pasos };
+  guardarRegistro(registro);
+}
+
+function pintarRegistro() {
+  const filas = Object.values(registro).filter(f => f.a === f.b).sort((x, y) => x.a - y.a);
+  $("filas").innerHTML = filas.length
+    ? filas.map(f => `<tr><td>${f.a}</td><td>${f.saltos}</td><td>${f.pasos}</td><td><b>${f.saltos + f.pasos}</b></td></tr>`).join("")
+    : '<tr><td class="vacio" colspan="4">—</td></tr>';
+}
+
+// Controles
+document.querySelectorAll(".contador button").forEach(b =>
+  b.addEventListener("click", () => {
+    const v = n.A + Number(b.dataset.d);
+    if (v < 1 || v > MAX) return;
+    n.A = n.B = v;
+    nuevo();
+  }));
+$("deshacer").addEventListener("click", deshacer);
+
+// Estilo: pixel art (por defecto) o círculos sencillos; se recuerda en este navegador
+const CLAVE_ESTILO = "minijuegos-rana-estilo";
+function ponerEstilo(sencillo) {
+  document.body.classList.toggle("sencillo", sencillo);
+  $("estilo").setAttribute("aria-pressed", sencillo);
+  try { localStorage.setItem(CLAVE_ESTILO, sencillo ? "sencillo" : "pixel"); } catch {}
+}
+try { ponerEstilo(localStorage.getItem(CLAVE_ESTILO) === "sencillo"); } catch { ponerEstilo(false); }
+$("estilo").addEventListener("click", () => ponerEstilo(!document.body.classList.contains("sencillo")));
+$("reiniciar").addEventListener("click", nuevo);
+$("abrir-registro").addEventListener("click", pintarRegistro);
+$("borrar-registro").addEventListener("click", () => { registro = {}; guardarRegistro(registro); pintarRegistro(); });
+$("pantalla").addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.();
+});
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); deshacer(); }
+});
+
+nuevo();
+</script>
+</body>
+</html>
