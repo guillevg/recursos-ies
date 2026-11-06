@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuerpos geométricos paso a paso</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  .fig { stroke: var(--tinta); stroke-width: 1.8; stroke-linejoin: round; }
+  .fig.a { fill: var(--azul); } .fig.a.clara { fill: #b5d4e8; } .fig.a.oscura { fill: #5f9bc4; }
+  .fig.b { fill: var(--naranja); } .fig.c { fill: #8fd19e; }
+  .fig.hueco { fill: #fff; } .fig.vacio { fill: none; } .fig.vidrio { fill: var(--azul); fill-opacity: 0.45; }
+  .fig.oculta { fill: none; stroke: var(--suave); stroke-width: 1.3; stroke-dasharray: 6 4; }
+  .fig.rojo { fill: #f5b7b1; fill-opacity: 0.6; stroke: var(--rojo); stroke-width: 3; }
+  .linea { stroke: var(--tinta); stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; }
+  .med { font-size: 18px; fill: var(--tinta); font-weight: 700; }
+  .med.incog { fill: var(--rojo); }
+  .dentro { font-size: 16px; fill: var(--tinta); }
+  .dentro.pequeno { font-size: 12px; }
+  .apunte { font-size: 19px; fill: var(--tinta); font-variant-numeric: tabular-nums; }
+  .apunte.fuerte { font-weight: 700; fill: var(--acento); }
+</style>
+<link rel="stylesheet" href="../herramientas.css">
+<script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
+</head>
+<body>
+<header>
+  <h1>Cuerpos geométricos paso a paso</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Tipo de problema">
+  <button type="button" role="tab" data-modo="volumen">Volumen por capas</button>
+  <button type="button" role="tab" data-modo="desarrollo">La caja: desarrollo y área</button>
+  <button type="button" role="tab" data-modo="cilindro">El cilindro</button>
+  <button type="button" role="tab" data-modo="piramide">La pirámide</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="volumen">
+    base de <input id="va" class="corto" type="number" min="1" max="8" aria-label="Largo de la base"> ×
+    <input id="vb" class="corto" type="number" min="1" max="8" aria-label="Ancho de la base"> y
+    <input id="vh" class="corto" type="number" min="1" max="8" aria-label="Capas"> capas; cada cubito, de 1
+    <select id="vu" aria-label="Unidad"><option value="cm">cm</option><option value="dm">dm</option><option value="m">m</option></select> de arista
+  </span>
+  <span data-para="desarrollo">
+    largo <input id="da" class="corto" type="number" step="any" min="0" aria-label="Largo">
+    ancho <input id="db" class="corto" type="number" step="any" min="0" aria-label="Ancho">
+    alto <input id="dc" class="corto" type="number" step="any" min="0" aria-label="Alto">
+  </span>
+  <span data-para="cilindro">
+    radio <input id="cr" class="corto" type="number" step="any" min="0" aria-label="Radio">
+    altura <input id="ch" class="corto" type="number" step="any" min="0" aria-label="Altura">
+  </span>
+  <span data-para="piramide">
+    lado de la base <input id="pl" class="corto" type="number" step="any" min="0" aria-label="Lado de la base">
+    altura <input id="ph" class="corto" type="number" step="any" min="0" aria-label="Altura">
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado. Se usa π ≈ 3,14, como en el cuaderno.</p>
+
+<script src="pasos.js"></script>
+<script src="cuerpos.js"></script>
+<script>
+"use strict";
+const { svg, num, texto } = Pasos;
+const raiz = v => `√${num(v)}`;
+
+// Dibujo a escala: encaja los puntos `todos` en el rectángulo (X, Y, W, H).
+function encajar(todos, { X, Y, W, H }) {
+  const xs = todos.map(p => p[0]), ys = todos.map(p => p[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
+  const k = Math.min(W / w, H / h), dx = X + (W - w * k) / 2, dy = Y + (H - h * k) / 2;
+  const T = p => [dx + (p[0] - x0) * k, dy + (p[1] - y0) * k];
+  T.k = k;
+  return T;
+}
+const poli = (g, T, pts, clase) => svg("polygon", { points: pts.map(p => T(p).map(v => v.toFixed(1)).join(",")).join(" "), class: "fig " + clase }, g);
+const trazo = (g, T, pts, clase) => svg("polyline", { points: pts.map(p => T(p).map(v => v.toFixed(1)).join(",")).join(" "), class: "fig " + clase }, g);
+function rotulo(g, T, p, t, clase, dx = 0, dy = 0, ancla = "middle") {
+  const [x, y] = T(p);
+  return texto(g, { x: x + dx, y: y + dy + 6, t, clase, ancla });
+}
+function apuntes(g, lineas, x = 560, y = 80) {
+  lineas.forEach(([t, paso, fuerte], i) => texto(g, { x, y: y + i * 36, t, clase: `apunte ${fuerte ? "fuerte" : ""} ${paso ? "ver" + paso : ""}`, ancla: "start" }));
+}
+// Perspectiva caballera: x a la derecha, y hacia arriba, z hacia el fondo
+// (a 45° y a la mitad), como en los cuerpos del código Typst común (_comun/cuerpos).
+const F = 0.354;
+const P = (x, y, z) => [x + z * F, -(y + z * F)];
+const CAJA = { X: 40, Y: 30, W: 470, H: 340 };
+
+// ------------------------------------------------------- volumen por capas
+function dibujarVolumen(r) {
+  const { a, b, h, u, capa, v, litros } = r;
+  const g = Pasos.lienzo(400);
+  const T = encajar([P(0, 0, 0), P(a, 0, 0), P(a, h, b), P(0, h, b), P(a, 0, b), P(0, h, 0)], CAJA);
+  // La caja vacía: caras de delante, de arriba y de la derecha, y las aristas ocultas.
+  poli(g, T, [P(0, 0, 0), P(a, 0, 0), P(a, h, 0), P(0, h, 0)], "hueco");
+  poli(g, T, [P(0, h, 0), P(a, h, 0), P(a, h, b), P(0, h, b)], "hueco");
+  poli(g, T, [P(a, 0, 0), P(a, 0, b), P(a, h, b), P(a, h, 0)], "hueco");
+  trazo(g, T, [P(0, 0, 0), P(0, 0, b), P(a, 0, b)], "oculta"); trazo(g, T, [P(0, 0, b), P(0, h, b)], "oculta");
+  // Los cubitos, de atrás hacia delante: cada uno tapa a los de detrás.
+  for (let z = b - 1; z >= 0; z--) for (let y = 0; y < h; y++) for (let x = 0; x < a; x++) {
+    const c = svg("g", { class: y > 0 ? "ver3" : z > 0 ? "ver2" : "ver1" }, g);
+    poli(c, T, [P(x, y + 1, z), P(x + 1, y + 1, z), P(x + 1, y + 1, z + 1), P(x, y + 1, z + 1)], "a clara");
+    poli(c, T, [P(x + 1, y, z), P(x + 1, y, z + 1), P(x + 1, y + 1, z + 1), P(x + 1, y + 1, z)], "a oscura");
+    poli(c, T, [P(x, y, z), P(x + 1, y, z), P(x + 1, y + 1, z), P(x, y + 1, z)], "a");
+  }
+  rotulo(g, T, P(a / 2, 0, 0), num(a), "med", 0, 20);
+  rotulo(g, T, P(0, h / 2, 0), num(h), "med", -14, 0, "end");
+  rotulo(g, T, P(a, 0, b / 2), num(b), "med", 14, 8, "start");
+  const u3 = `${u}³`, capacidad = u === "cm" ? `${num(v)} mL = ${num(litros)} L` : `${num(litros)} L`;
+  apuntes(g, [[`Una fila: ${a} cubitos`, 1], [`Una capa: ${a} · ${b} = ${capa}`, 2], [`${h} capas: ${capa} · ${h} = ${v}`, 3],
+    [`V = ${v} ${u3}`, 4, true], [`Caben ${capacidad}`, 5]]);
+  return [
+    ["El prisma", `<p>Un prisma de ${a} × ${b} de base y ${h} de altura, en ${u}. Su <b>volumen</b> es el número de cubitos de 1 ${u} de arista que caben dentro: cada cubito es 1 ${u3}.</p>`],
+    ["Una fila", `<p>A lo largo caben <b>${a}</b> cubitos.</p>`],
+    ["Una capa", `<p>En el fondo caben ${b} ${b === 1 ? "fila" : "filas"} como esa: la primera capa tiene ${a} · ${b} = <b>${capa}</b> cubitos. Son tantos como unidades cuadradas tiene la base: el <b>área de la base</b>.</p>`],
+    ["Todas las capas", `<p>Hay ${h} ${h === 1 ? "capa" : "capas iguales"}, una por cada ${u} de altura: ${capa} · ${h} = <b>${v}</b> cubitos.</p>`],
+    ["La fórmula", `<p><b>Volumen = área de la base · altura</b> = ${capa} · ${h} = ${v} ${u3}.</p><p>Sirve para cualquier prisma, sea cual sea la forma de su base, y también para el cilindro.</p>`],
+    ["¿Cuánta agua cabe?", u === "cm" ? `<p>Cada cm³ es 1 mililitro: caben ${num(v)} mL, es decir, <b>${num(litros)} litros</b> (1 litro = 1 000 cm³).</p>`
+      : u === "dm" ? `<p>Cada dm³ es exactamente 1 litro: caben <b>${num(litros)} litros</b>.</p>`
+      : `<p>En cada m³ caben 1 000 litros: ${num(v)} · 1 000 = <b>${num(litros)} litros</b>.</p>`],
+  ];
+}
+
+// --------------------------------------------------- la caja: desarrollo y área
+function dibujarDesarrollo(r) {
+  const { a, b, c, ab, ac, bc, area, cubo } = r;
+  const g = Pasos.lienzo(400);
+  // La caja, hasta que se abre.
+  const caja = svg("g", { class: "hasta1" }, g);
+  const Tc = encajar([P(0, 0, 0), P(a, 0, 0), P(a, c, b), P(0, c, b), P(a, 0, b)], { X: 110, Y: 70, W: 330, H: 260 });
+  poli(caja, Tc, [P(0, c, 0), P(a, c, 0), P(a, c, b), P(0, c, b)], "a clara");
+  poli(caja, Tc, [P(a, 0, 0), P(a, 0, b), P(a, c, b), P(a, c, 0)], "c");
+  poli(caja, Tc, [P(0, 0, 0), P(a, 0, 0), P(a, c, 0), P(0, c, 0)], "b");
+  rotulo(caja, Tc, P(a / 2, 0, 0), num(a), "med", 0, 20);
+  rotulo(caja, Tc, P(0, c / 2, 0), num(c), "med", -14, 0, "end");
+  rotulo(caja, Tc, P(a, 0, b / 2), num(b), "med", 14, 8, "start");
+  // El desarrollo: una tira (lado, base, lado, tapa) y, encima y debajo de la base, las otras dos caras.
+  const red = svg("g", { class: "ver1" }, g);
+  const T = encajar([[0, 0], [2 * a + 2 * c, b + 2 * c]], { X: 30, Y: 40, W: 490, H: 320 });
+  const cara = (x, y, w, h, color, paso, cuenta, valor) => {
+    const pts = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+    poli(red, T, pts, "hueco");
+    poli(red, T, pts, `${color} ver${paso}`);
+    const ancho = w * T.k, alto = h * T.k;
+    rotulo(red, T, [x + w / 2, y + h / 2], ancho >= 92 && alto >= 26 ? `${cuenta} = ${num(valor)}` : num(valor), `dentro ver${paso} ${ancho < 50 || alto < 22 ? "pequeno" : ""}`);
+  };
+  cara(c, c, a, b, "a", 2, `${num(a)} · ${num(b)}`, ab); cara(2 * c + a, c, a, b, "a", 2, `${num(a)} · ${num(b)}`, ab);
+  cara(c, 0, a, c, "b", 3, `${num(a)} · ${num(c)}`, ac); cara(c, c + b, a, c, "b", 3, `${num(a)} · ${num(c)}`, ac);
+  cara(0, c, c, b, "c", 4, `${num(c)} · ${num(b)}`, bc); cara(c + a, c, c, b, "c", 4, `${num(c)} · ${num(b)}`, bc);
+  apuntes(g, [[`2 · ${num(ab)} = ${num(2 * ab)}`, 2], [`2 · ${num(ac)} = ${num(2 * ac)}`, 3], [`2 · ${num(bc)} = ${num(2 * bc)}`, 4],
+    [`${num(2 * ab)} + ${num(2 * ac)} + ${num(2 * bc)}`, 5], [`Área = ${num(area)}`, 5, true]], 550);
+  return [
+    ["La caja", `<p>Una caja (un ortoedro) de ${num(a)} de largo, ${num(b)} de ancho y ${num(c)} de alto. Tiene 6 caras, y todas son rectángulos.</p>`],
+    ["El desarrollo", `<p>Si la abrimos y la extendemos sobre la mesa, queda su <b>desarrollo plano</b>: los 6 rectángulos. ${cubo ? "En el cubo son 6 cuadrados iguales." : "Son iguales de dos en dos: cada cara y la de enfrente."}</p>`],
+    ["El suelo y la tapa", `<p>Dos rectángulos de ${num(a)} × ${num(b)}: cada uno, ${num(ab)}. Los dos, ${num(2 * ab)}.</p>`],
+    ["Delante y detrás", `<p>Dos rectángulos de ${num(a)} × ${num(c)}: cada uno, ${num(ac)}. Los dos, ${num(2 * ac)}.</p>`],
+    ["Los dos lados", `<p>Dos rectángulos de ${num(c)} × ${num(b)}: cada uno, ${num(bc)}. Los dos, ${num(2 * bc)}.</p>`],
+    ["El área total", `<p>El área de la caja es la de su desarrollo: ${num(2 * ab)} + ${num(2 * ac)} + ${num(2 * bc)} = <b>${num(area)}</b>.</p>
+      <p>No hace falta una fórmula: basta con dibujar el desarrollo y sumar sus caras.${cubo ? ` En el cubo, 6 · ${num(ab)}.` : ""}</p>`],
+  ];
+}
+
+// ---------------------------------------------------------------- el cilindro
+function dibujarCilindro(d) {
+  const { r, h, largo, lateral, base, area, v } = d;
+  const g = Pasos.lienzo(400);
+  // El cilindro, con las bases como elipses.
+  const cuerpo = svg("g", { class: "hasta1" }, g);
+  const Tc = encajar([[-r, -0.3 * r], [r, h + 0.3 * r]], { X: 140, Y: 50, W: 260, H: 290 });
+  const [cx, y0] = Tc([0, 0]), [, y1] = Tc([0, h]), rx = r * Tc.k, ry = 0.3 * rx;
+  svg("path", { d: `M ${cx - rx} ${y0} V ${y1} A ${rx} ${ry} 0 0 0 ${cx + rx} ${y1} V ${y0}`, class: "fig c" }, cuerpo);
+  svg("ellipse", { cx, cy: y0, rx, ry, class: "fig a" }, cuerpo);
+  svg("path", { d: `M ${cx - rx} ${y1} A ${rx} ${ry} 0 0 1 ${cx + rx} ${y1}`, class: "fig oculta" }, cuerpo);
+  svg("line", { x1: cx, y1: y0, x2: cx + rx, y2: y0, class: "linea" }, cuerpo);
+  texto(cuerpo, { x: cx + rx / 2, y: y0 - 6, t: num(r), clase: "med" });
+  texto(cuerpo, { x: cx + rx + 12, y: (y0 + y1) / 2 + 6, t: num(h), clase: "med", ancla: "start" });
+  // El desarrollo: un rectángulo (la cara lateral desenrollada) y los dos círculos.
+  const red = svg("g", { class: "ver1" }, g);
+  const T = encajar([[0, 0], [largo, h + 4 * r]], { X: 40, Y: 30, W: 470, H: 340 });
+  const k = T.k, [x0, ya] = T([0, 2 * r]), [xm] = T([largo / 2, 0]);
+  svg("rect", { x: x0, y: ya, width: largo * k, height: h * k, class: "fig hueco" }, red);
+  svg("rect", { x: x0, y: ya, width: largo * k, height: h * k, class: "fig c ver3" }, red);
+  for (const cy of [T([0, r])[1], T([0, 3 * r + h])[1]]) {
+    svg("circle", { cx: xm, cy, r: r * k, class: "fig hueco" }, red);
+    svg("circle", { cx: xm, cy, r: r * k, class: "fig a ver4" }, red);
+  }
+  svg("line", { x1: xm, y1: T([0, r])[1], x2: xm + r * k, y2: T([0, r])[1], class: "linea" }, red);
+  texto(red, { x: xm + r * k / 2, y: T([0, r])[1] - 6, t: num(r), clase: "med" });
+  texto(red, { x: x0 - 10, y: ya + h * k / 2 + 6, t: num(h), clase: "med", ancla: "end" });
+  texto(red, { x: xm, y: ya + h * k / 2 + 6, t: `largo: ${num(largo)}`, clase: "med incog ver2" });
+  apuntes(g, [[`Largo: 2 · 3,14 · ${num(r)} = ${num(largo)}`, 2], [`Lateral: ${num(largo)} · ${num(h)} = ${num(lateral)}`, 3],
+    [`Base: 3,14 · ${num(r)}² = ${num(base)}`, 4], [`Área = ${num(lateral)} + 2 · ${num(base)}`, 5], [`Área = ${num(area)}`, 5, true],
+    [`V = ${num(base)} · ${num(h)} = ${num(v)}`, 6, true]], 535);
+  return [
+    ["El cilindro", `<p>Un cilindro de radio ${num(r)} y altura ${num(h)}: dos bases, que son círculos iguales, y una cara lateral curva.</p>`],
+    ["El desarrollo", `<p>Si quitamos las dos bases y cortamos la cara lateral de arriba abajo (como la etiqueta de una lata), al extenderla queda un <b>rectángulo</b>. El desarrollo son ese rectángulo y los dos círculos.</p>`],
+    ["El largo del rectángulo", `<p>El rectángulo rodeaba la base: su largo es la <b>longitud de la circunferencia</b>, 2 · π · r = 2 · 3,14 · ${num(r)} = <b>${num(largo)}</b>. Su alto es la altura del cilindro.</p>`],
+    ["El área lateral", `<p>Área del rectángulo: ${num(largo)} · ${num(h)} = <b>${num(lateral)}</b>.</p>`],
+    ["Las bases", `<p>Cada base es un círculo: π · r² = 3,14 · ${num(r)}² = <b>${num(base)}</b>.</p>`],
+    ["El área total", `<p>Área lateral más las dos bases: ${num(lateral)} + 2 · ${num(base)} = <b>${num(area)}</b>.</p>`],
+    ["El volumen", `<p>Como en un prisma, el cilindro se llena por capas iguales a la base: <b>volumen = área de la base · altura</b> = ${num(base)} · ${num(h)} = <b>${num(v)}</b>.</p>`],
+  ];
+}
+
+// --------------------------------------------------------------- la pirámide
+function dibujarPiramide(r) {
+  const { l, h, base, prisma, v, ap2, ap, exacta, cara, lateral, area } = r;
+  const g = Pasos.lienzo(400);
+  const T = encajar([P(0, 0, 0), P(l, 0, 0), P(l, h, l), P(0, h, l), P(l, 0, l), P(0, h, 0)], CAJA);
+  const V = P(l / 2, h, l / 2), O = P(l / 2, 0, l / 2), M = P(l / 2, 0, 0);
+  // El prisma de la misma base y la misma altura.
+  const pr = svg("g", { class: "ver1" }, g);
+  trazo(pr, T, [P(0, 0, 0), P(0, h, 0), P(l, h, 0), P(l, 0, 0)], "oculta");
+  trazo(pr, T, [P(0, h, 0), P(0, h, l), P(l, h, l), P(l, h, 0)], "oculta");
+  trazo(pr, T, [P(l, 0, l), P(l, h, l)], "oculta"); trazo(pr, T, [P(0, 0, l), P(0, h, l)], "oculta");
+  // La pirámide: aristas ocultas, caras de delante y de la derecha.
+  trazo(g, T, [P(0, 0, 0), P(0, 0, l), P(l, 0, l)], "oculta"); trazo(g, T, [P(0, 0, l), V], "oculta");
+  poli(g, T, [P(l, 0, 0), P(l, 0, l), V], "vidrio");
+  poli(g, T, [P(0, 0, 0), P(l, 0, 0), V], "vidrio");
+  trazo(g, T, [V, O], "oculta");
+  rotulo(g, T, P(l / 2, h / 2, l / 2), num(h), "med", 12, 0, "start");
+  rotulo(g, T, P(l / 2, 0, 0), num(l), "med", 0, 20);
+  rotulo(g, T, P(l, 0, l / 2), num(l), "med", 14, 8, "start");
+  // El triángulo rectángulo de la apotema.
+  const tri = svg("g", { class: "ver3" }, g);
+  poli(tri, T, [O, M, V], "rojo");
+  rotulo(tri, T, P(l / 2, 0, l / 4), num(l / 2), "med incog", -22, 0, "end");
+  rotulo(tri, T, P(l / 2, h / 2, l / 4), exacta ? num(ap) : `≈ ${num(ap)}`, "med incog", -12, 0, "end");
+  const vAp = exacta ? `= ${num(ap)}` : `≈ ${num(ap)}`;
+  apuntes(g, [[`Prisma: ${num(l)} · ${num(l)} · ${num(h)} = ${num(prisma)}`, 1], [`V = ${num(prisma)} : 3 = ${num(v)}`, 2, true],
+    [`a² = ${num(h)}² + ${num(l / 2)}² = ${num(ap2)}`, 3], [`a = ${raiz(ap2)} ${vAp}`, 3],
+    [`4 caras: 4 · ${num(cara)} = ${num(lateral)}`, 4], [`Área = ${num(lateral)} + ${num(base)} = ${num(area)}`, 5, true]], 535);
+  return [
+    ["La pirámide", `<p>Una pirámide de base cuadrada de lado ${num(l)} y altura ${num(h)}. La <b>altura</b> va de la cúspide al centro de la base, en perpendicular.</p>`],
+    ["El prisma que la contiene", `<p>Un prisma con la misma base y la misma altura: su volumen es área de la base · altura = ${num(base)} · ${num(h)} = ${num(prisma)}.</p>`],
+    ["La tercera parte", `<p>Hacen falta <b>tres</b> pirámides llenas de arena para llenar ese prisma. El volumen de la pirámide es la tercera parte:</p>
+      <p><b>V = área de la base · altura : 3</b> = ${num(prisma)} : 3 = <b>${num(v)}</b>.</p>`],
+    ["La apotema", `<p>Para el área hacen falta las caras, que son triángulos. Su altura no es la de la pirámide: es la <b>apotema</b>, que baja por la cara desde la cúspide.</p>
+      <p>Forma un triángulo rectángulo con la altura (${num(h)}) y la mitad del lado (${num(l / 2)}). Con Pitágoras: ${raiz(ap2)} ${vAp}. Siempre es mayor que la altura.</p>`],
+    ["Las cuatro caras", `<p>Cada cara es un triángulo de base ${num(l)} y altura ${num(ap)}: ${num(l)} · ${num(ap)} : 2 = ${num(cara)}. Las cuatro: <b>${num(lateral)}</b> (área lateral).</p>`],
+    ["El área total", `<p>Área lateral más la base: ${num(lateral)} + ${num(base)} = <b>${num(area)}</b>.</p><p>Para un tejado solo cuenta el área lateral: ${num(lateral)}.</p>`],
+  ];
+}
+
+const elegirModo = Pasos.montar({
+  volumen: { campos: { a: "va", b: "vb", h: "vh", u: "vu" }, calcular: Cuerpos.calcular.volumen, dibujar: dibujarVolumen,
+             ejemplos: Cuerpos.EJEMPLOS.volumen, azar: () => Cuerpos.azar("volumen") },
+  desarrollo: { campos: { a: "da", b: "db", c: "dc" }, calcular: Cuerpos.calcular.desarrollo, dibujar: dibujarDesarrollo,
+                ejemplos: Cuerpos.EJEMPLOS.desarrollo, azar: () => Cuerpos.azar("desarrollo") },
+  cilindro: { campos: { r: "cr", h: "ch" }, calcular: Cuerpos.calcular.cilindro, dibujar: dibujarCilindro,
+              ejemplos: Cuerpos.EJEMPLOS.cilindro, azar: () => Cuerpos.azar("cilindro") },
+  piramide: { campos: { l: "pl", h: "ph" }, calcular: Cuerpos.calcular.piramide, dibujar: dibujarPiramide,
+              ejemplos: Cuerpos.EJEMPLOS.piramide, azar: () => Cuerpos.azar("piramide") },
+}, "volumen");
+</script>
+</body>
+</html>

@@ -210,32 +210,19 @@
     return s + `</svg>`;
   }
 
-  // Caja de a × b × c cubitos en perspectiva caballera (a de largo, b de fondo,
-  // c de alto), con sus cotas. rejilla: las aristas de los cubitos; resuelto,
-  // la capa de arriba en naranja y el resto en azul.
-  function prismaSVG({ a, b, c, cotas, rejilla, resuelto }) {
+  // La caja del enunciado en perspectiva caballera (a de largo, b de fondo, c de
+  // alto), con sus medidas. El rellenado por capas está en el paso a paso de la
+  // pista (cuerpos.html#volumen).
+  function prismaSVG({ a, b, c, cotas }) {
     const fx = .45, fy = .32, k = Math.min(48, 430 / (a + fx * b), 230 / (c + fy * b));
     const x0 = 90, y0 = 18 + (c + fy * b) * k;
-    const pt = (x, y, z) => [x0 + x * k + y * fx * k, y0 - z * k - y * fy * k], P = (...p) => pt(...p).join(",");
-    const cara = (pts, clase) => `<polygon points="${pts.map(p => P(...p)).join(" ")}" class="${clase}"/>`;
-    const linea = (p, q) => { const [x1, y1] = pt(...p), [x2, y2] = pt(...q); return `<line class="corte" style="stroke-width: 1" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; };
-    const abajo = resuelto ? "c-azul" : "c-blanco", arriba = resuelto ? "c-naranja" : "c-blanco";
+    const pt = (x, y, z) => [x0 + x * k + y * fx * k, y0 - z * k - y * fy * k];
+    const cara = (pts, extra = "") => `<polygon points="${pts.map(p => pt(...p).join(",")).join(" ")}" ${extra}/>`;
+    const lado = [[a, 0, 0], [a, b, 0], [a, b, c], [a, 0, c]];
     let s = `<svg viewBox="0 0 ${x0 + (a + fx * b) * k + 110} ${y0 + 48}" role="img">`;
-    // Frente y lado derecho: las c − 1 capas de abajo y la de arriba (sus
-    // aristas, con la rejilla); la tapa.
-    const z = resuelto ? c - 1 : c;
-    s += cara([[0, 0, 0], [a, 0, 0], [a, 0, z], [0, 0, z]], abajo) + cara([[0, 0, z], [a, 0, z], [a, 0, c], [0, 0, c]], arriba);
-    s += cara([[a, 0, 0], [a, b, 0], [a, b, z], [a, 0, z]], abajo) + cara([[a, 0, z], [a, b, z], [a, b, c], [a, 0, c]], arriba);
-    s += cara([[0, 0, c], [a, 0, c], [a, b, c], [0, b, c]], arriba);
-    // Sombra del lado derecho, para que se lea el volumen.
-    s += `<polygon points="${[[a, 0, 0], [a, b, 0], [a, b, c], [a, 0, c]].map(p => P(...p)).join(" ")}" style="fill: var(--fg); opacity: .12"/>`;
-    if (rejilla) {
-      for (let x = 1; x < a; x++) s += linea([x, 0, 0], [x, 0, c]) + linea([x, 0, c], [x, b, c]);
-      for (let z = 1; z < c; z++) s += linea([0, 0, z], [a, 0, z]) + linea([a, 0, z], [a, b, z]);
-      for (let y = 1; y < b; y++) s += linea([0, y, c], [a, y, c]) + linea([a, y, c], [a, y, 0]);
-    }
-    for (const pts of [[[0, 0, 0], [a, 0, 0], [a, 0, c], [0, 0, c]], [[a, 0, 0], [a, b, 0], [a, b, c], [a, 0, c]], [[0, 0, c], [a, 0, c], [a, b, c], [0, b, c]]])
-      s += `<polygon points="${pts.map(p => P(...p)).join(" ")}" class="borde"/>`;
+    s += cara([[0, 0, 0], [a, 0, 0], [a, 0, c], [0, 0, c]], 'class="c-blanco"') + cara([[0, 0, c], [a, 0, c], [a, b, c], [0, b, c]], 'class="c-blanco"') + cara(lado, 'class="c-blanco"');
+    s += cara(lado, 'style="fill: var(--fg); opacity: .12"');   // sombra del lado, para que se lea el volumen
+    for (const pts of [[[0, 0, 0], [a, 0, 0], [a, 0, c], [0, 0, c]], lado, [[0, 0, c], [a, 0, c], [a, b, c], [0, b, c]]]) s += cara(pts, 'class="borde"');
     const [xa, ya] = pt(a / 2, 0, 0), [xc, yc] = pt(0, 0, c / 2), [xb, yb] = pt(a, b / 2, 0);
     s += `<text class="t-llave" x="${xa}" y="${ya + 32}">${cotas[0]}</text>`;
     s += `<text class="t-llave" x="${xb + 14}" y="${yb + 20}" style="text-anchor: start">${cotas[1]}</text>`;
@@ -365,7 +352,7 @@
     medidas: {
       titulo: "Área y volumen",
       sub: "Contar cuadraditos y cubitos",
-      herramienta: ["Cambio de unidades paso a paso", "unidades.html#cambiar"],
+      herramienta: ["Volumen por capas", "cuerpos.html#volumen"],
       pista: `<ul><li><b>Área</b>: los cuadraditos que cubren la figura. Una fila tiene tantos como el largo, y hay tantas filas como el ancho: largo · ancho. Va en cm², m²…</li>
              <li><b>Volumen</b>: los cubitos que llenan la caja. Una capa es largo · ancho, y hay tantas capas como el alto: largo · ancho · alto. Va en cm³, m³…</li>
              <li><b>Litros</b>: 1 dm³ = 1 L y 1 m³ = 1000 L. Si las medidas están en cm, pásalas antes a dm.</li></ul>`,
@@ -410,7 +397,9 @@
                 `${q} mide <span class="dato">${a} ${u}</span> de largo, <span class="dato">${b} ${u}</span> de ancho y <span class="dato">${c} ${u}</span> de alto. ¿Cuál es su volumen?`);
           return {
             html: elegir(CTX),
-            dibujo: r => prismaSVG({ a, b, c, cotas: [`${a} ${u}`, `${b} ${u}`, `${c} ${u}`], rejilla: true, resuelto: r }),
+            dibujo: () => prismaSVG({ a, b, c, cotas: [`${a} ${u}`, `${b} ${u}`, `${c} ${u}`] }),
+            dibujoOculto: true,
+            pasos: ["cuerpos.html", "volumen", { a, b, h: c, u }],
             trabajo: `<div class="campos">${campo("r", "Volumen")}</div>${unidad("u", u)}`,
             _ok: { r: String(R), u: U },
             comprobar: v => comprobarMedida(v, R, U, [
@@ -438,7 +427,10 @@
         const pasoDm = u === "cm" ? `<p>En dm, porque 1 dm³ = 1 L: ${med.map((x, i) => `${x} cm = ${n[i]} dm`).join("; ")}.</p>` : "";
         return {
           html,
-          dibujo: r => prismaSVG({ a, b, c, cotas, rejilla: r, resuelto: r }),
+          dibujo: () => prismaSVG({ a, b, c, cotas }),
+          dibujoOculto: true,
+          // En cm, el paso a paso cuenta cubitos de 1 dm (los de 1 cm serían demasiados).
+          pasos: ["cuerpos.html", "volumen", { a, b, h: c, u: u === "cm" ? "dm" : u }],
           campos: [{ id: "r", etiqueta: "Litros (L)" }],
           _ok: { r: String(L) },
           comprobar: v => comprobarMedida(v, L, null, errores, ""),
