@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Apagar luces</title>
+<title>Luces</title>
 <link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800">
 <link rel="stylesheet" href="comun.css">
 <style>
@@ -18,7 +18,7 @@
   }
   /* El selector va abajo; el tablero queda centrado en el espacio libre */
   #tablero, .config { margin-top: auto; }
-  .config { display: flex; justify-content: center; }
+  .config { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem; }
   .contador {
     display: flex; align-items: center; gap: .25rem;
     background: var(--tarjeta); border: 2px solid var(--linea);
@@ -43,9 +43,12 @@
     background: var(--hueco);
     transition: background-color .15s, box-shadow .15s;
   }
-  .luz.on::after {
-    background: var(--luz);
-    box-shadow: inset 0 0 0 calc(var(--c) * .04) var(--luz-borde);
+  .luz[data-v="1"]::after { --color: var(--luz); --borde: var(--luz-borde); }
+  .luz[data-v="2"]::after { --color: var(--luz2); --borde: var(--luz2-borde); }
+  .luz[data-v="3"]::after { --color: var(--luz3); --borde: var(--luz3-borde); }
+  .luz:not([data-v="0"])::after {
+    background: var(--color);
+    box-shadow: inset 0 0 0 calc(var(--c) * .04) var(--borde);
   }
   .luz.fiesta::after { animation: bote .4s ease-in-out var(--retraso); }
   @keyframes bote { 50% { transform: scale(.75); } }
@@ -61,12 +64,15 @@
   <a class="icono" href="index.html" title="Inicio">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
   </a>
-  <h1>Apagar luces</h1>
+  <h1>Luces</h1>
   <button class="icono" data-abre="ayuda" title="Instrucciones">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
   </button>
   <button class="icono" id="deshacer" title="Deshacer">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+  </button>
+  <button class="icono" id="azar" title="Configuración al azar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><g fill="currentColor" stroke="none"><circle cx="8" cy="8" r="1.6"/><circle cx="16" cy="8" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="8" cy="16" r="1.6"/><circle cx="16" cy="16" r="1.6"/></g></svg>
   </button>
   <button class="icono" id="reiniciar" title="Empezar de nuevo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
@@ -80,7 +86,7 @@
   <div id="tablero"></div>
 
   <div class="config">
-    <div class="contador">
+    <div class="contador" data-que="n">
       <button class="icono" data-d="-1" title="Tablero más pequeño">−</button>
       <svg class="rejilla" viewBox="0 0 24 24" aria-hidden="true">
         <g fill="var(--luz)"><rect x="2" y="2" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/><rect x="16" y="2" width="6" height="6" rx="1.2"/><rect x="9" y="16" width="6" height="6" rx="1.2"/></g>
@@ -89,12 +95,18 @@
       <output id="n">5</output>
       <button class="icono" data-d="1" title="Tablero más grande">+</button>
     </div>
+    <div class="contador" data-que="k">
+      <button class="icono" data-d="-1" title="Menos colores">−</button>
+      <svg class="rejilla" id="ciclo" viewBox="0 0 24 24" aria-hidden="true"></svg>
+      <output id="k">1</output>
+      <button class="icono" data-d="1" title="Más colores">+</button>
+    </div>
   </div>
 </main>
 
 <dialog id="ayuda" class="instrucciones">
   <div class="cab-dialogo">
-    <h2>Apagar luces</h2>
+    <h2>Luces</h2>
     <button class="icono" data-cierra title="Cerrar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
@@ -102,28 +114,44 @@
   <p><b>Objetivo:</b> apagar todas las luces.</p>
   <ul>
     <li>Al tocar una casilla, cambian ella y sus vecinas de arriba, abajo, izquierda y derecha.</li>
-    <li>Las encendidas se apagan y las apagadas se encienden.</li>
+    <li>Con un color, las encendidas se apagan y las apagadas se encienden.</li>
+    <li>Con más colores, cada casilla avanza un paso en el ciclo: apagada → amarilla → verde → … → apagada.</li>
+    <li>El dado prepara un tablero al azar, que siempre tiene solución.</li>
   </ul>
-  <p><b>Para pensar:</b> ¿importa el orden en que tocas las casillas? ¿Qué pasa si tocas dos veces la misma? ¿Cuántos toques hacen falta como mínimo?</p>
+  <p><b>Para pensar:</b> ¿importa el orden en que tocas las casillas? ¿Cuántas veces puedes tocar la misma casilla antes de que vuelva a estar como al principio? ¿Cuántos toques hacen falta como mínimo?</p>
 </dialog>
 
 <script src="comun.js"></script>
 <script>
-// Se empieza con todo encendido, que siempre tiene solución.
-// Toques mínimos: 3 → 5, 4 → 4, 5 → 15, 6 → 28, 7 → 33.
-const MIN = 3, MAX = 7;
+// Cada casilla tiene un valor de 0 (apagada) a k (número de colores); un toque
+// suma 1 a ella y a sus vecinas, en ciclo (módulo k + 1).
+// Todo en amarillo siempre tiene solución con 1 a 3 colores y lados de 3 a 7
+// (comprobado persiguiendo luces fila a fila). Toques mínimos:
+//   1 color:   3 → 5, 4 → 4, 5 → 15, 6 → 28, 7 → 33
+//   2 colores: 3 → 5, 4 → 8, 5 → 18, 6 → 28, 7 → 58
+//   3 colores: 3 → 23, 4 → 12, 5 → 29, 6 → 76, 7 → 75
+// El tablero al azar se hace tocando al azar desde todo apagado: también tiene solución.
+const MIN = 3, MAX = 7, MAX_COLORES = 3;
 const VECINAS = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+const COLORES = ["--luz", "--luz2", "--luz3"];
 
 let n = 5;
-let luces = [];      // luces[i][j]: true si está encendida
-let historial = [];  // casillas tocadas; tocar otra vez la misma lo deshace
+let k = 1;           // número de colores
+let alAzar = false;  // si la partida empezó con el dado (al cambiar el tamaño o los colores se sigue igual)
+let luces = [];      // luces[i][j]: 0 apagada, 1..k el color
+let historial = [];  // casillas tocadas, para deshacer
 
 const $ = id => document.getElementById(id);
 const elTablero = $("tablero");
 let elLuces = [];
 
-function nuevo() {
-  luces = [...Array(n)].map(() => Array(n).fill(true));
+function nuevo(azar = alAzar) {
+  alAzar = azar;
+  luces = [...Array(n)].map(() => Array(n).fill(azar ? 0 : 1));
+  if (azar) {
+    while (apagado())
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) cambiar(i, j, Math.floor(Math.random() * (k + 1)));
+  }
   historial = [];
   montar();
 }
@@ -143,24 +171,37 @@ function montar() {
   pintar();
 }
 
+// Icono del contador de colores: los k colores en fila, en el orden del ciclo
+function pintarCiclo() {
+  const lado = 6, hueco = 1.5, ancho = k * lado + (k - 1) * hueco, x0 = (24 - ancho) / 2;
+  $("ciclo").innerHTML = COLORES.slice(0, k).map((c, i) =>
+    `<rect x="${x0 + i * (lado + hueco)}" y="9" width="${lado}" height="${lado}" rx="1.2" fill="var(${c})"/>`).join("");
+}
+
 function pintar() {
-  elLuces.forEach((fila, i) => fila.forEach((b, j) => b.classList.toggle("on", luces[i][j])));
+  elLuces.forEach((fila, i) => fila.forEach((b, j) => { b.dataset.v = luces[i][j]; }));
   $("n").textContent = n;
+  $("k").textContent = k;
+  pintarCiclo();
   $("deshacer").disabled = historial.length === 0;
-  document.querySelectorAll(".contador button").forEach(b => {
-    const v = n + Number(b.dataset.d);
-    b.disabled = v < MIN || v > MAX;
+  document.querySelectorAll(".contador").forEach(c => {
+    const [v, min, max] = c.dataset.que === "n" ? [n, MIN, MAX] : [k, 1, MAX_COLORES];
+    c.querySelectorAll("button").forEach(b => {
+      const w = v + Number(b.dataset.d);
+      b.disabled = w < min || w > max;
+    });
   });
 }
 
-function cambiar(i, j) {
+function cambiar(i, j, veces = 1) {
+  const m = k + 1;
   for (const [di, dj] of VECINAS) {
     const a = i + di, b = j + dj;
-    if (a >= 0 && a < n && b >= 0 && b < n) luces[a][b] = !luces[a][b];
+    if (a >= 0 && a < n && b >= 0 && b < n) luces[a][b] = ((luces[a][b] + veces) % m + m) % m;
   }
 }
 
-const apagado = () => luces.every(fila => fila.every(x => !x));
+const apagado = () => luces.every(fila => fila.every(x => x === 0));
 
 function tocar(i, j) {
   if (apagado()) return;
@@ -181,21 +222,28 @@ function fiesta(i0, j0) {
 function deshacer() {
   const t = historial.pop();
   if (!t) return;
-  cambiar(...t);
+  cambiar(...t, -1);
   elLuces.flat().forEach(b => b.classList.remove("fiesta"));
   pintar();
 }
 
 // Controles
-document.querySelectorAll(".contador button").forEach(b =>
-  b.addEventListener("click", () => {
-    const v = n + Number(b.dataset.d);
-    if (v < MIN || v > MAX) return;
-    n = v;
-    nuevo();
-  }));
+document.querySelectorAll(".contador").forEach(c =>
+  c.querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => {
+      const d = Number(b.dataset.d);
+      if (c.dataset.que === "n") {
+        if (n + d < MIN || n + d > MAX) return;
+        n += d;
+      } else {
+        if (k + d < 1 || k + d > MAX_COLORES) return;
+        k += d;
+      }
+      nuevo();
+    })));
 $("deshacer").addEventListener("click", deshacer);
-$("reiniciar").addEventListener("click", nuevo);
+$("reiniciar").addEventListener("click", () => nuevo(false));
+$("azar").addEventListener("click", () => nuevo(true));
 $("pantalla").addEventListener("click", () => {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen?.();
