@@ -42,10 +42,14 @@
     left: calc(var(--c) * var(--t)); width: var(--c);
     border: none; padding: 0; background: none; cursor: pointer;
   }
-  /* Varilla y base de cada torre */
-  .torre::before, .torre::after { content: ""; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); background: var(--linea); }
-  .torre::before { width: calc(var(--h) * .35); height: var(--alto-varilla); border-radius: calc(var(--h) * .2) calc(var(--h) * .2) 0 0; }
-  .torre::after { width: 92%; height: calc(var(--h) * .3); border-radius: calc(var(--h) * .15); }
+  /* Varilla y base de cada torre: la varilla empieza donde acaba la base, sin cruzarla */
+  .torre::before, .torre::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); background: var(--linea); }
+  .torre::before {
+    bottom: calc(var(--h) * .3);
+    width: calc(var(--h) * .35); height: calc(var(--alto-varilla) - var(--h) * .3);
+    border-radius: calc(var(--h) * .2) calc(var(--h) * .2) 0 0;
+  }
+  .torre::after { bottom: 0; width: 92%; height: calc(var(--h) * .3); border-radius: calc(var(--h) * .15); }
   .torre.origen::before, .torre.origen::after,
   .torre.destino::before, .torre.destino::after { background: #969c93; }
 

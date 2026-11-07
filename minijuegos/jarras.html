@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarras</title>
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800">
+<link rel="stylesheet" href="comun.css">
+<style>
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem;
+  }
+  /* El selector va abajo; el tablero queda centrado en el espacio libre */
+  #objetivo, .config { margin-top: auto; }
+  .config { display: flex; justify-content: center; }
+  .contador {
+    display: flex; align-items: center; gap: .25rem;
+    background: var(--tarjeta); border: 2px solid var(--linea);
+    border-radius: 1rem; padding: .25rem;
+  }
+  .contador output { min-width: 2ch; text-align: center; font-size: 1.75rem; font-weight: 800; }
+  .contador .jarrita { width: 2.25rem; height: 2.25rem; margin: 0 .25rem; }
+
+  #objetivo { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 0; }
+
+  /* --u: alto de un litro, según la jarra más grande del reto */
+  #tablero {
+    --H: min(24rem, calc(100vh - 22rem));
+    --u: calc(var(--H) / var(--max));
+    --w: min(8rem, calc((100vw - 14rem) / var(--k)));
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: min(2.5rem, 4vw);
+  }
+  .jarra {
+    border: none; padding: 0; background: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    transition: translate .15s;
+  }
+  .vaso {
+    position: relative;
+    width: var(--w); height: calc(var(--u) * var(--cap));
+    border: .3rem solid var(--linea); border-top: none;
+    border-radius: 0 0 1rem 1rem;
+    background: var(--tarjeta);
+    overflow: hidden;
+  }
+  .agua {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: calc(100% * var(--l) / var(--cap));
+    background: var(--luz3);
+    transition: height .4s ease-in-out;
+  }
+  .litros {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: min(2.5rem, calc(var(--w) * .4)); font-weight: 800; color: var(--tinta);
+  }
+  .cap { font-size: 1.35rem; font-weight: 600; color: var(--suave); }
+  .jarra.origen .vaso, .jarra.destino .vaso, .grifo.destino, .desague.destino, .grifo.origen { border-color: #969c93; }
+  .jarra.origen { translate: 0 -.75rem; }
+  .jarra.no { animation: no .3s; }
+  .jarra.fiesta { animation: bote .5s ease-in-out 2; }
+  @keyframes no { 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
+  @keyframes bote { 50% { transform: translateY(-1rem); } }
+
+  /* Grifo (llenar) y desagüe (vaciar): botones grandes a los lados */
+  .grifo, .desague {
+    align-self: center;
+    width: 5rem; height: 5rem;
+    border: .3rem solid var(--linea); border-radius: 1.25rem;
+    background: var(--tarjeta); cursor: pointer; color: var(--tinta);
+    display: grid; place-items: center;
+  }
+  .grifo svg, .desague svg { width: 3rem; height: 3rem; }
+  .grifo[hidden], .desague[hidden] { display: none; }
+
+  #aviso { min-height: 2.5rem; font-size: 1.5rem; font-weight: 600; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .agua, .jarra { transition: none; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <a class="icono" href="index.html" title="Inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+  </a>
+  <h1>Jarras</h1>
+  <button class="icono" data-abre="ayuda" title="Instrucciones">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg>
+  </button>
+  <button class="icono" id="deshacer" title="Deshacer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+  </button>
+  <button class="icono" id="reiniciar" title="Empezar de nuevo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+  </button>
+  <button class="icono" id="pantalla" title="Pantalla completa">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+  </button>
+</header>
+
+<main>
+  <p id="objetivo"></p>
+
+  <div id="tablero">
+    <button class="grifo" id="grifo" title="Grifo: llenar una jarra">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h9a4 4 0 0 1 4 4v1"/><path d="M4 6v6"/><path d="M8 9V5h3"/><path d="M17 18c0 1.1-.9 2-2 2"/><path d="M17 17.5c-.7.9-1 1.6-1 2.1"/></svg>
+    </button>
+    <div id="jarras" style="display: contents"></div>
+    <button class="desague" id="desague" title="Desagüe: vaciar una jarra">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 9h8M7 12h10M8 15h8"/></svg>
+    </button>
+  </div>
+
+  <div id="aviso"></div>
+
+  <div class="config">
+    <div class="contador">
+      <button class="icono" data-d="-1" title="Reto anterior">−</button>
+      <svg class="jarrita" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 4h14v14a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" fill="var(--tarjeta)" stroke="var(--linea)" stroke-width="2"/>
+        <path d="M6 12h12v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z" fill="var(--luz3)"/>
+      </svg>
+      <output id="reto">1</output>
+      <button class="icono" data-d="1" title="Reto siguiente">+</button>
+    </div>
+  </div>
+</main>
+
+<dialog id="ayuda" class="instrucciones">
+  <div class="cab-dialogo">
+    <h2>Jarras</h2>
+    <button class="icono" data-cierra title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <p><b>Objetivo:</b> medir la cantidad que pide cada reto. Las jarras no tienen marcas: solo sabes lo que cabe en cada una.</p>
+  <ul>
+    <li><b>Llenar:</b> toca el grifo y después una jarra.</li>
+    <li><b>Vaciar:</b> toca una jarra y después el desagüe.</li>
+    <li><b>Trasvasar:</b> toca una jarra y después otra. Se echa agua hasta que la primera se vacía o la segunda se llena.</li>
+    <li>En los retos sin grifo, el agua es la que hay: solo se puede trasvasar.</li>
+  </ul>
+  <p><b>Para pensar:</b> con las jarras de 3 y 5 litros, ¿qué cantidades puedes conseguir? ¿Habría alguna cantidad imposible con dos jarras de 4 y 6 litros? ¿Por qué?</p>
+</dialog>
+
+<script src="comun.js"></script>
+<script>
+// Retos ordenados de menos a más pasos (mínimos calculados con una búsqueda en anchura:
+// llenar, vaciar y trasvasar cuentan un paso cada uno).
+//   con grifo: conseguir x litros en una jarra; sin grifo: repartir en dos mitades iguales.
+const RETOS = [
+  { caps: [3, 4], grifo: true, x: 2 },          // 4 pasos
+  { caps: [3, 5], grifo: true, x: 4 },          // 6
+  { caps: [4, 7], grifo: true, x: 6 },          // 6
+  { caps: [3, 7], grifo: true, x: 5 },          // 8
+  { caps: [5, 8], grifo: true, x: 4 },          // 10
+  { caps: [8, 5, 3], ini: [8, 0, 0], x: 4 },    // 7
+  { caps: [10, 7, 3], ini: [10, 0, 0], x: 5 },  // 9
+  { caps: [12, 7, 5], ini: [12, 0, 0], x: 6 },  // 11
+];
+const GRIFO = "grifo", DESAGUE = "desague";
+
+let r = 0;
+let litros = [];     // litros en cada jarra
+let historial = [];  // estados anteriores, para deshacer y contar pasos
+let sel = null;      // índice de jarra o GRIFO
+
+const $ = id => document.getElementById(id);
+const reto = () => RETOS[r];
+let elJarras = [];
+
+// Con grifo basta una jarra con x litros; sin grifo, dos jarras con x cada una.
+const conseguidas = () => litros.map((l, i) => l === reto().x ? i : -1).filter(i => i >= 0);
+const hecho = () => conseguidas().length >= (reto().grifo ? 1 : 2);
+
+// ¿Se puede hacer algo de a a b?
+function puede(a, b) {
+  const caps = reto().caps;
+  if (a === b || b === GRIFO) return false;
+  if (a === GRIFO) return b !== DESAGUE && litros[b] < caps[b];
+  if (litros[a] === 0) return false;
+  if (b === DESAGUE) return true;
+  return litros[b] < caps[b];
+}
+
+function nuevo() {
+  const R = reto();
+  litros = R.ini ? R.ini.slice() : R.caps.map(() => 0);
+  historial = [];
+  sel = null;
+  montar();
+}
+
+function montar() {
+  const R = reto(), cont = $("jarras");
+  cont.innerHTML = "";
+  $("tablero").style.setProperty("--max", Math.max(...R.caps));
+  $("tablero").style.setProperty("--k", R.caps.length);
+  elJarras = R.caps.map((cap, i) => {
+    const b = document.createElement("button");
+    b.className = "jarra";
+    b.style.setProperty("--cap", cap);
+    b.setAttribute("aria-label", `Jarra de ${cap} litros`);
+    b.innerHTML = `<div class="vaso"><div class="agua"></div><div class="litros"></div></div><div class="cap">${cap} L</div>`;
+    b.addEventListener("click", () => tocar(i));
+    b.addEventListener("animationend", () => b.classList.remove("no", "fiesta"));
+    cont.append(b);
+    return b;
+  });
+  $("grifo").hidden = $("desague").hidden = !R.grifo;
+  $("objetivo").textContent = R.grifo ? `Consigue ${R.x} litros` : `Reparte en dos partes de ${R.x} litros`;
+  pintar();
+}
+
+function pintar() {
+  elJarras.forEach((b, i) => {
+    b.style.setProperty("--l", litros[i]);
+    b.querySelector(".litros").textContent = litros[i] || "";
+    b.classList.toggle("origen", sel === i);
+    b.classList.toggle("destino", sel !== null && puede(sel, i));
+  });
+  $("grifo").classList.toggle("origen", sel === GRIFO);
+  $("desague").classList.toggle("destino", sel !== null && puede(sel, DESAGUE));
+  $("reto").textContent = r + 1;
+  $("deshacer").disabled = historial.length === 0;
+  document.querySelectorAll(".contador button").forEach(b => {
+    const v = r + Number(b.dataset.d);
+    b.disabled = v < 0 || v >= RETOS.length;
+  });
+  $("aviso").textContent = hecho() ? `${historial.length} pasos` : "";
+}
+
+function no(el) { el.classList.remove("no"); void el.offsetWidth; el.classList.add("no"); }
+
+function tocar(t) {
+  if (hecho()) return;
+  if (sel === null) {
+    // El grifo siempre puede ser origen; una jarra, si tiene agua
+    if (t === DESAGUE) return;
+    if (t !== GRIFO && litros[t] === 0) { no(elJarras[t]); return; }
+    sel = t;
+  } else if (sel === t) {
+    sel = null;
+  } else if (puede(sel, t)) {
+    hacer(sel, t);
+    sel = null;
+  } else if (t === GRIFO || (t !== DESAGUE && litros[t] > 0)) {
+    sel = t;   // no puede recibir, pero sirve de origen: se cambia la elección
+  } else {
+    if (typeof t === "number") no(elJarras[t]);
+    return;
+  }
+  pintar();
+  if (hecho()) conseguidas().forEach(i => elJarras[i].classList.add("fiesta"));
+}
+
+function hacer(a, b) {
+  historial.push(litros.slice());
+  const caps = reto().caps;
+  if (a === GRIFO) litros[b] = caps[b];
+  else if (b === DESAGUE) litros[a] = 0;
+  else {
+    const t = Math.min(litros[a], caps[b] - litros[b]);
+    litros[a] -= t;
+    litros[b] += t;
+  }
+}
+
+function deshacer() {
+  const h = historial.pop();
+  if (!h) return;
+  litros = h;
+  sel = null;
+  elJarras.forEach(b => b.classList.remove("fiesta"));
+  pintar();
+}
+
+// Controles
+document.querySelectorAll(".contador button").forEach(b =>
+  b.addEventListener("click", () => {
+    const v = r + Number(b.dataset.d);
+    if (v < 0 || v >= RETOS.length) return;
+    r = v;
+    nuevo();
+  }));
+$("grifo").addEventListener("click", () => tocar(GRIFO));
+$("desague").addEventListener("click", () => tocar(DESAGUE));
+$("deshacer").addEventListener("click", deshacer);
+$("reiniciar").addEventListener("click", nuevo);
+$("pantalla").addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.();
+});
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") { e.preventDefault(); deshacer(); }
+});
+
+nuevo();
+</script>
+</body>
+</html>
