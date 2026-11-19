@@ -96,7 +96,7 @@ const Porcentajes = (() => {
     variacion: [
       { etiqueta: "Chaqueta: −25 %", total: 60, p: 25, sentido: "baja", texto: "Una chaqueta cuesta 60 €. ¿Cuánto cuesta con un 25 % de descuento?" },
       { etiqueta: "Bicicleta: −12 %", total: 250, p: 12, sentido: "baja", texto: "Una bicicleta de 250 € se rebaja un 12 %. ¿Cuánto cuesta ahora?" },
-      { etiqueta: "Pueblo: +140 %", total: 3000, p: 140, sentido: "sube", texto: "Un pueblo de 3000 habitantes aumenta un 140 %. ¿Cuántos habitantes tiene ahora?" },
+      { etiqueta: "Con IGIC: +7 %", total: 200, p: 7, sentido: "sube", texto: "Un patinete cuesta 200 € sin impuestos. ¿Cuánto cuesta con el IGIC del 7 %?" },
     ],
   };
 

@@ -32,6 +32,7 @@ const TRAZOS = {
   sonido: '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
   mudo: '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/>',
   otro: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  tabla: '<path d="M3 4h4v10H3zM17 4h4v10h-4zM7 9h10v5H7zM6 17h12v3H6z"/>',
 };
 const icono = n => `<svg class="icono" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TRAZOS[n]}</svg>`;
 // Parada del camino: anillo que se llena hasta p (0-100); lleno, dorado y con ✓.
@@ -45,19 +46,19 @@ function cabecera(c) {
 
 function inicio(c) {
   document.title = `Repaso de ${nombreCorto(c)}`;
-  vista().innerHTML = `
+  vista().innerHTML = `<div class="indice">
     <h1 class="vh">Temas</h1>
     <ol class="camino">${c.temas.map(t => {
       const def = Repaso.temas[`${c.id}/${t.id}`];
       if (!def) return `<li class="parada apagada"><span class="anillo"><span>${numeroTema(t)}</span></span><span class="nombre">${nombreTema(t)}</span></li>`;
       const acts = Object.values(def.bloques).flat(), hechas = acts.filter(a => progreso.get(clave(c.id, t.id, a)) >= META).length;
       return `<li><a class="parada" href="#${c.id}/${t.id}">${anillo(Math.round(100 * hechas / acts.length), numeroTema(t), `${hechas} de ${acts.length} superadas`)}<span class="nombre">${nombreTema(t)}</span></a></li>`;
-    }).join("")}</ol>`;
+    }).join("")}</ol></div>`;
 }
 
 function tema(c, t, def) {
   document.title = nombreTema(t);
-  vista().innerHTML = `
+  vista().innerHTML = `<div class="indice">
     ${volver("Temas", `#${c.id}`)}
     <h1>${nombreTema(t)}</h1>
     <ol class="camino">${t.bloques.map(b => {
@@ -66,7 +67,7 @@ function tema(c, t, def) {
         const p = progreso.get(clave(c.id, t.id, a));
         return `<li><a class="parada" href="#${c.id}/${t.id}/${a}">${anillo(Math.round(100 * p / META), "", p >= META ? "Superada" : `${p} de ${META}`)}<span class="nombre">${def.actividades[a].titulo}</span></a></li>`;
       }).join("");
-    }).join("")}</ol>`;
+    }).join("")}</ol></div>`;
 }
 
 function actividad(c, t, def, claveAct) {
@@ -110,6 +111,7 @@ function actividad(c, t, def, claveAct) {
         <div class="ayudas">
           ${ayuda("b-pista", "Pista", "pista")}
           ${oculto ? ayuda("b-dibujo", "Dibujo", "dibujo", ' aria-controls="dibujo" aria-pressed="false"') : ""}
+          ${A.modal ? ayuda("b-modal", A.modal.nombre, A.modal.icono) : ""}
           ${ayuda("b-otro", "Otro ejercicio", "otro")}
         </div>
       </form>`;
@@ -135,6 +137,8 @@ function actividad(c, t, def, claveAct) {
       $("#salida").insertAdjacentHTML("afterbegin", `<div class="aviso pista" id="pista">${A.pista.startsWith("<") ? A.pista : `<p>${A.pista}</p>`}${enlace}</div>`);
       $("#pista a")?.addEventListener("click", ev => { ev.preventDefault(); ventana(ev.currentTarget.href, A.herramienta[0]); });
     });
+    // Material de consulta de la actividad (la tabla periódica…), en la ventana.
+    if (A.modal) $("#b-modal").addEventListener("click", () => ventanaHTML(A.modal.nombre, A.modal.html));
     $("#b-otro").addEventListener("click", () => { if (!resuelto) progreso.set(k, 0); ej = A.nuevo(variante); pintar(); });
     const primera = entradas()[0];
     (grupo(primera) ? primera.querySelector("input") : primera).focus({ preventScroll: true });
@@ -145,7 +149,8 @@ function actividad(c, t, def, claveAct) {
     if (resuelto) { ej = A.nuevo(variante); pintar(); return; }
     const v = {};
     entradas().forEach(i => { v[i.id.slice(2)] = valor(i); i.classList.remove("mal", "bien"); });
-    if (Object.values(v).some(x => x.trim() === "")) { $("#salida").innerHTML = `<div class="aviso mal"><p>Contesta todo antes de comprobar.</p></div>`; return; }
+    // data-opcional: casillas que pueden quedar vacías (la carga de un átomo neutro).
+    if (entradas().some(i => !("opcional" in i.dataset) && v[i.id.slice(2)].trim() === "")) { $("#salida").innerHTML = `<div class="aviso mal"><p>Contesta todo antes de comprobar.</p></div>`; return; }
     const r = ej.comprobar(v);
     entradas().forEach(i => i.classList.add((r.campos || []).includes(i.id.slice(2)) ? "mal" : "bien"));
     if (!r.bien) fallos++;
@@ -175,9 +180,21 @@ function ventana(href, titulo) {
   const v = $("#ventana");
   if (!v.showModal) { window.open(href, "_blank", "noopener"); return; }
   $("#ventana-titulo").textContent = titulo;
+  $("#ventana-contenido").hidden = true;
+  $("#ventana-marco").hidden = false;
   $("#ventana-marco").title = titulo;
   $("#ventana-marco").src = href;
   v.showModal();
+  $("#ventana-cerrar").focus();
+}
+// La misma ventana con contenido de la propia página en vez de una herramienta.
+function ventanaHTML(titulo, html) {
+  const v = $("#ventana");
+  $("#ventana-titulo").textContent = titulo;
+  $("#ventana-marco").hidden = true;
+  $("#ventana-contenido").innerHTML = html;
+  $("#ventana-contenido").hidden = false;
+  if (v.showModal) v.showModal(); else v.setAttribute("open", "");
   $("#ventana-cerrar").focus();
 }
 // Cargada la herramienta, el foco pasa dentro para que las flechas funcionen ya;

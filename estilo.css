@@ -29,7 +29,8 @@ body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--fo
 [hidden] { display: none !important; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.wrap { max-width: 640px; margin: 0 auto; padding-inline: 20px; padding-block: 0 6rem; }
+.wrap { max-width: 960px; margin: 0 auto; padding-inline: 20px; padding-block: 0 6rem; }
+.indice { max-width: 600px; margin-inline: auto; }   /* los caminos de temas y actividades, con el ancho de siempre */
 
 header.barra .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-block: 1.3rem 2.4rem; }
 .marca { font-weight: 800; font-size: 1.1rem; color: var(--accent); text-decoration: none; }
@@ -104,7 +105,7 @@ input.casilla.bien { border-color: var(--ok); }
 
 /* Datos del enunciado y dibujos */
 .dato { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dibujo svg { display: block; max-width: 100%; height: auto; }
+.dibujo svg { display: block; max-width: min(100%, 600px); height: auto; margin-inline: auto; }   /* el ancho de antes: más ancho, más alto y más scroll */
 /* Fila de las dos fracciones a todo el ancho; el resultado, en otra fila debajo. */
 .rects { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .5rem .8rem; }
 .rects.res { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); margin-top: 1.2rem; }
@@ -200,6 +201,8 @@ input.casilla.bien { border-color: var(--ok); }
 #ventana-cerrar { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; cursor: pointer; }
 #ventana-cerrar:hover { background: #dcdaf7; }
 #ventana-marco { flex: 1; width: 100%; border: 0; background: var(--bg); }
+#ventana-marco[hidden], .ventana-contenido[hidden] { display: none; }
+.ventana-contenido { flex: 1; overflow-y: auto; padding: 1.2rem 1rem 2rem; }
 
 @media (max-width: 520px) {
   .ventana { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; }
@@ -220,3 +223,35 @@ input.casilla.bien { border-color: var(--ok); }
 /* Tabla de valor posicional (comparar decimales): los ceros añadidos, destacados */
 .posicional td { min-width: 2.2rem; }
 .posicional td.relleno { color: var(--accent); font-weight: 800; }
+
+/* Átomos (1º PDC, SA2): los colores de la ficha */
+.atomo-svg { margin: 0 auto; }
+.capa { fill: none; stroke: #8c8c8c; stroke-width: 1.4; }
+.proton { fill: #c8362d; stroke: #1f1f1f; stroke-width: 1.6; }
+.neutron { fill: #f3e7c4; stroke: #1f1f1f; stroke-width: 1.6; }
+.electron { fill: #1f5fbf; stroke: #1f1f1f; stroke-width: 1.6; }
+.signo { stroke: #fff; stroke-width: 2.2; stroke-linecap: round; fill: none; }
+.leyenda-atomo { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem 1.2rem; margin-top: .6rem; font-size: .95rem; }
+.leyenda-atomo i { border-radius: 50%; }
+.leyenda-atomo i.proton { background: #c8362d; } .leyenda-atomo i.neutron { background: #f3e7c4; } .leyenda-atomo i.electron { background: #1f5fbf; }
+.pie-atomo { text-align: center; margin: .6rem 0 0; font-size: 1.1rem; }
+/* Notación ᴬ_Z X^q: A y Z a la izquierda del símbolo, la carga arriba a la derecha */
+.nota-quim { display: inline-grid; grid-template-columns: auto auto auto; grid-template-rows: auto auto; align-items: center; vertical-align: middle; column-gap: .08em; line-height: 1; }
+.nota-quim .nq-a { grid-area: 1 / 1; text-align: right; font-size: .72em; }
+.nota-quim .nq-z { grid-area: 2 / 1; text-align: right; font-size: .72em; }
+.nota-quim .nq-x { grid-area: 1 / 2 / 3 / 3; font-size: 1.3em; font-weight: 700; }
+.nota-quim .nq-q { grid-area: 1 / 3; font-size: .72em; align-self: start; }
+.nota-quim.entrada { gap: .35rem .4rem; }
+.nota-quim.entrada input.casilla { width: 3.4rem; text-align: center; font-size: 1.05rem; }
+.nota-quim.entrada input.nq-x { width: 4rem; height: 100%; font-size: 1.6rem; }
+.tabla-periodica { max-width: 980px; margin: 0 auto; }
+.tabla-periodica table { border-collapse: collapse; margin: 0 auto; table-layout: fixed; width: 100%; }
+.tabla-periodica td { padding: 0; border: 1px solid var(--line); background: var(--surface); }
+.tabla-periodica td.vacia, .tabla-periodica tr.separa td { border: 0; background: none; height: .5rem; }
+.tabla-periodica td.hueco { font-size: clamp(.38rem, 1.4vw, .55rem); color: var(--muted); text-align: center; line-height: 1.1; }
+.tabla-periodica button { display: block; width: 100%; padding: .15rem 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: center; line-height: 1.05; cursor: pointer; }
+.tabla-periodica button[aria-pressed] { background: var(--accent); color: #fff; }
+.tabla-periodica button[aria-pressed] small { color: #fff; }
+.tabla-periodica small { display: block; font-size: clamp(.4rem, 1.5vw, .7rem); color: var(--muted); }
+.tabla-periodica b { display: block; font-size: clamp(.55rem, 2.3vw, 1.15rem); }
+.tabla-periodica .elemento-elegido { text-align: center; font-weight: 600; font-size: 1.15rem; margin: 1rem 0 0; min-height: 1.6em; }

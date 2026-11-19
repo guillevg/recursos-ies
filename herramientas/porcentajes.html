@@ -19,6 +19,21 @@
   .flecha-txt { font-size: 17px; text-anchor: middle; fill: var(--acento); font-weight: 700; }
   .flecha-txt.total { fill: var(--rojo); }
   .relleno-azul { fill: var(--azul); opacity: 0.45; }
+  .quitado { fill: #fbeceb; stroke: var(--rojo); stroke-width: 2; stroke-dasharray: 6 4; }
+  .valor.quita { fill: var(--rojo); font-weight: 700; }
+  .valor.cambio { font-weight: 700; }
+  .mult { font-size: 21px; font-weight: 700; fill: var(--acento); }
+  .mult.total { fill: var(--rojo); }
+  [data-para="variacion"], [data-para="original"] { flex-basis: 100%; }
+  .tipos { display: grid; margin-bottom: 0.5rem; grid-template-columns: auto auto auto; gap: 0.25rem 0.4rem; align-items: center; font-size: 0.9rem; width: 100%; max-width: 34rem; }
+  .tipos .cab { color: var(--suave); text-align: center; }
+  .tipos .fila { text-align: right; font-weight: 700; color: var(--tinta); }
+  .tipos button[aria-pressed="true"] { background: var(--acento); color: #fff; border-color: var(--acento); }
+  .cuatro { border-collapse: collapse; margin: 0.6rem 0 0.2rem; font-size: 0.95em; }
+  .cuatro th, .cuatro td { border: 1px solid var(--borde); padding: 0.2rem 0.7rem; text-align: center; }
+  .cuatro th { font-weight: 400; color: var(--suave); }
+  .cuatro td { font-weight: 700; }
+  .cuatro td.actual { background: var(--azul); }
 </style>
 <link rel="stylesheet" href="../herramientas.css">
 <script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
@@ -32,16 +47,16 @@
 <nav class="modos" role="tablist" aria-label="Tipo de problema">
   <button type="button" role="tab" data-modo="de">El % de una cantidad</button>
   <button type="button" role="tab" data-modo="que">¿Qué porcentaje es?</button>
-  <button type="button" role="tab" data-modo="variacion">Aumentos y descuentos</button>
+  <button type="button" role="tab" data-modo="variacion" id="tab-cambio">Subidas y bajadas</button>
   <button type="button" role="tab" data-modo="encadenados">Dos cambios seguidos</button>
-  <button type="button" role="tab" data-modo="original">¿Cuánto era antes?</button>
   <button type="button" role="tab" data-modo="formas">Fracción, decimal y porcentaje</button>
 </nav>
 
 <form class="entrada" id="entrada" autocomplete="off">
   <span data-para="de">el <input id="dp" type="number" min="0.01" max="1000" step="any" aria-label="Porcentaje"> % de <input id="dt" type="number" min="1" step="any" aria-label="Cantidad"></span>
   <span data-para="que"><input id="qp" type="number" min="0" step="any" aria-label="Parte"> de <input id="qt" type="number" min="1" step="any" aria-label="Total"></span>
-  <span data-para="variacion"><input id="vt" type="number" min="1" step="any" aria-label="Cantidad inicial">
+  <span data-para="variacion"><span class="tipos" id="tipos-variacion"></span>
+    precio inicial <input id="vt" type="number" min="1" step="any" aria-label="Precio inicial">
     <select id="vs" aria-label="Aumento o descuento"><option value="baja">baja un</option><option value="sube">sube un</option></select>
     <input id="vp" type="number" min="0.01" max="500" step="any" aria-label="Porcentaje"> %</span>
   <span data-para="encadenados"><input id="et" type="number" min="1" step="any" aria-label="Cantidad inicial">
@@ -49,10 +64,10 @@
     <input id="ep1" type="number" min="0.01" max="500" step="any" class="corto" aria-label="Primer porcentaje"> % y después
     <select id="es2" aria-label="Segundo cambio"><option value="baja">baja un</option><option value="sube">sube un</option></select>
     <input id="ep2" type="number" min="0.01" max="500" step="any" class="corto" aria-label="Segundo porcentaje"> %</span>
-  <span data-para="original">después de
+  <span data-para="original"><span class="tipos" id="tipos-original"></span>
+    precio final <input id="of" type="number" min="0.01" step="any" aria-label="Precio final">, después de
     <select id="os" aria-label="Subida o bajada"><option value="sube">subir un</option><option value="baja">bajar un</option></select>
-    <input id="op" type="number" min="0.01" max="500" step="any" class="corto" aria-label="Porcentaje"> %, vale
-    <input id="of" type="number" min="0.01" step="any" aria-label="Cantidad final">; ¿cuánto era antes?</span>
+    <input id="op" type="number" min="0.01" max="500" step="any" class="corto" aria-label="Porcentaje"> %</span>
   <span data-para="formas">
     <span class="frac-input"><input id="fn" class="corto" type="number" min="1" max="99" aria-label="Numerador"><hr><input id="fd" class="corto" type="number" min="2" max="100" aria-label="Denominador"></span>
     <select id="fdesde" aria-label="Qué se da"><option value="fraccion">se da la fracción</option><option value="porcentaje">se da el porcentaje</option></select>
@@ -149,39 +164,132 @@ function dibujarQue(r) {
   ];
 }
 
-// -------------------------------------------------- aumentos y descuentos
-function dibujarVariacion(r) {
-  const { total, p, sentido, cambio, pFinal, resultado, multiplicador } = r;
-  const sube = sentido === "sube";
-  const g = Pasos.lienzo(260);
-  const max = Math.max(100, pFinal), R = rectaDoble(g, { y: 90, max });
-  R.marca(0, "0");
-  R.marca(100, num(total));
-  // Salto del 100 % al porcentaje final, con el cambio encima.
-  const x1 = R.x(100), x2 = R.x(pFinal), ys = 52;
-  const salto = svg("g", { class: "ver1" }, g);
-  svg("path", { d: `M ${x1} ${ys + 8} Q ${(x1 + x2) / 2} ${ys - 22} ${x2} ${ys + 8}`, class: "salto" }, salto);
-  texto(salto, { x: (x1 + x2) / 2, y: ys - 16, t: `${sube ? "+" : "−"}${pc(p)} = ${sube ? "+" : "−"}${num(cambio.resultado)}`, clase: "salto-txt" });
-  R.marca(pFinal, num(resultado), "ver2", true);
+// Puntas de flecha (azul y roja) para .flecha y .flecha.total.
+function puntas(g) {
+  const defs = svg("defs", {}, g);
+  for (const [id, color] of [["punta", "var(--acento)"], ["punta-roja", "var(--rojo)"]]) {
+    const mk = svg("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+    svg("path", { d: "M 0 0 L 10 5 L 0 10 z", style: `fill: ${color}` }, mk);
+  }
+}
+
+// --------------------------------------------------- subidas y bajadas
+// Cuatro tipos: sube o baja, y se conoce el precio inicial (modo variacion)
+// o el final (modo original). Los dos modos comparten el dibujo: dos barras
+// con la misma escala, arriba el precio inicial (el 100 %) y abajo el final
+// (el 100 % más la subida, en naranja, o lo que queda tras quitar el
+// descuento, en rojo). La flecha de arriba abajo es × multiplicador; la de
+// vuelta, : multiplicador.
+const mult = x => String(x).replace(".", ",");   // sin redondear (×0,875)
+const din = x => num(x).replace(/,(\d)$/, ",$10");   // dinero, con céntimos: 10,20
+const eur = x => `${din(x)} €`;
+const XB = 150, WB = 420, YA = 70, YB = 220, H = 56;
+
+// Cuadrícula de los cuatro tipos en el cuadro de datos de los dos modos: al
+// pulsar uno, se conservan el precio escrito y el porcentaje.
+const CAMPOS_CAMBIO = { variacion: ["vt", "vp", "total"], original: ["of", "op", "final"] };
+const botonesTipo = [];
+for (const [modo, conocido] of [["variacion", "inicial"], ["original", "final"]]) {
+  const caja = document.getElementById("tipos-" + modo);
+  const celda = (t, clase) => { const n = document.createElement("span"); n.className = clase; n.textContent = t; caja.appendChild(n); };
+  celda("", "");
+  celda("conocemos el precio inicial", "cab");
+  celda("conocemos el precio final", "cab");
+  for (const sube of [true, false]) {
+    celda(sube ? "Sube" : "Baja", "cab fila");
+    for (const [destino, cdestino] of [["variacion", "inicial"], ["original", "final"]]) {
+      const bt = document.createElement("button");
+      bt.type = "button";
+      bt.textContent = `${sube ? "sube" : "baja"}, ¿precio ${cdestino === "inicial" ? "final" : "inicial"}?`;
+      bt.addEventListener("click", () => {
+        const [precio, p] = CAMPOS_CAMBIO[modo].map(id => Number(document.getElementById(id).value));
+        elegirModo(destino, { [CAMPOS_CAMBIO[destino][2]]: precio, p, sentido: sube ? "sube" : "baja" });
+      });
+      caja.appendChild(bt);
+      botonesTipo.push({ bt, conocido: cdestino, sube });
+    }
+  }
+}
+function marcarTipo(conocido, sube) {
+  for (const b of botonesTipo) b.bt.setAttribute("aria-pressed", b.conocido === conocido && b.sube === sube);
+  document.getElementById("tab-cambio").setAttribute("aria-selected", "true");   // una sola pestaña para los dos modos
+}
+
+// Los cuatro casos con este porcentaje, con el actual resaltado.
+function cuatroCasos(p, conocido, sube) {
+  const fila = s => {
+    const m = s ? mult(Math.round((100 + p) * 1e7) / 1e9) : p < 100 ? mult(Math.round((100 - p) * 1e7) / 1e9) : null;
+    const td = (c, op) => `<td class="${c === conocido && s === sube ? "actual" : ""}">${m === null ? "—" : `${op} ${m}`}</td>`;
+    return `<tr><th>${s ? "Sube" : "Baja"} un ${pc(p)}</th>${td("inicial", "×")}${td("final", ":")}</tr>`;
+  };
+  return `<table class="cuatro"><tr><th></th><th>Conocemos el inicial</th><th>Conocemos el final</th></tr>${fila(true)}${fila(false)}</table>`;
+}
+
+function dibujarCambio({ I, F, p, sube, pf, m, conocido, malo }) {
+  const inicial = conocido === "inicial", c = I * p / 100, s = sube ? "+" : "−";
+  marcarTipo(conocido, sube);
+  const g = Pasos.lienzo(340), esc = WB / Math.max(100, pf), x = v => XB + v * esc;
+  puntas(g);
+  // Un tramo de barra con su porcentaje dentro o, si no cabe, encima.
+  const tramo = (padre, y, de, a, clase, rotulo, claseTxt = "") => {
+    svg("rect", { x: x(de), y, width: (a - de) * esc, height: H, class: clase }, padre);
+    const cabe = (a - de) * esc >= 64;
+    texto(padre, { x: (x(de) + x(a)) / 2, y: cabe ? y + H / 2 : y - 14, t: rotulo, clase: `valor ${claseTxt}` });
+    return cabe;
+  };
+  // Arriba, el precio inicial.
+  texto(g, { x: 40, y: YA + H / 2 + 5, t: "Precio inicial", clase: "rotulo-barra", ancla: "start" });
+  tramo(g, YA, 0, 100, "parte azul", "100 %");
+  svg("rect", { x: x(0), y: YA, width: 100 * esc, height: H, class: "contorno" }, g);
+  Pasos.llave(g, { x1: x(0), x2: x(100), y: YA, arriba: true, texto: `100 % = ${inicial ? eur(I) : "?"}`, clase: inicial ? "" : "hasta2" });
+  if (!inicial) Pasos.llave(g, { x1: x(0), x2: x(100), y: YA, arriba: true, texto: `100 % = ${eur(I)}`, clase: "ver2" });
+  // Abajo, el precio final: el 100 % y lo que sube, o lo que queda y lo que se quita.
+  const abajo = svg("g", { class: inicial ? "ver1" : "" }, g);
+  texto(abajo, { x: 40, y: YB + H / 2 + 5, t: "Precio final", clase: "rotulo-barra", ancla: "start" });
+  svg("line", { x1: x(100), y1: YA + H, x2: x(100), y2: YB + H, class: "union" }, abajo);
+  tramo(abajo, YB, 0, sube ? 100 : pf, "parte azul", pc(sube ? 100 : pf));
+  const cabe = tramo(abajo, YB, sube ? 100 : pf, sube ? pf : 100, sube ? "parte naranja" : "quitado", `${s}${pc(p)}`, sube ? "" : "quita");
+  svg("rect", { x: x(0), y: YB, width: pf * esc, height: H, class: "contorno" }, abajo);
+  const cambio = svg("g", { class: inicial ? "ver1" : "ver2" }, g);
+  texto(cambio, { x: (x(100) + x(pf)) / 2, y: YB - (cabe ? 14 : 36), t: `${s}${eur(c)}`, clase: "valor cambio" + (sube ? "" : " quita") });
+  Pasos.llave(g, { x1: x(0), x2: x(pf), y: YB, arriba: false, texto: `${pc(pf)} = ${eur(F)}`, clase: inicial ? "ver2" : "" });
+  // Las flechas: × multiplicador hacia abajo y, si se conoce el final, : multiplicador de vuelta.
+  const xf = XB + WB + 45, ym = (YA + YB + H) / 2;
+  const flecha = (xx, y1, y2, txt, clase) => {
+    const f = svg("g", { class: "ver3" }, g);
+    svg("path", { d: `M ${xx} ${y1} L ${xx} ${y2}`, class: "flecha " + clase }, f);
+    texto(f, { x: xx + 12, y: ym + 7, t: txt, clase: "mult " + clase, ancla: "start" });
+  };
+  flecha(xf, YA + 10, YB + H - 10, `× ${mult(m)}`, "");
+  if (!inicial) flecha(xf + 95, YB + H - 10, YA + 10, `: ${mult(m)}`, "total");
+
+  const tabla = cuatroCasos(p, conocido, sube);
+  const quitar = sube ? "la subida" : "el descuento";
+  if (inicial) return [
+    ["El precio inicial es el 100 %", `<p>La barra de arriba es el precio inicial: <b>${eur(I)}</b>, el <b>100 %</b>.</p>`],
+    [sube ? "Lo que sube" : "Lo que se descuenta", `<p>La barra de abajo es el precio final: la de arriba ${sube ? "<b>más</b> un trozo naranja, lo que sube" : "<b>menos</b> un trozo, el descuento"}. Ese trozo es el ${pc(p)} del precio inicial: ${din(I)} · ${mult(p / 100)} = <b>${eur(c)}</b>.</p>`],
+    ["El precio final", `<p>${din(I)} ${s} ${din(c)} = <b>${eur(F)}</b>. La barra de abajo es el 100 % ${s} ${pc(p)} = <b>${pc(pf)}</b> del precio inicial.</p>`],
+    ["En un solo paso: multiplicar", `<p>Pasar del 100 % al ${pc(pf)} es multiplicar por ${num(pf)} : 100 = <b>${mult(m)}</b>: ${din(I)} · ${mult(m)} = <b>${eur(F)}</b>. ${sube ? "Es mayor que 1: el precio crece." : "Es menor que 1: el precio baja."}</p>${tabla}`],
+  ];
+  const uno = F / pf, unoExacto = Math.abs(uno * 100 - Math.round(uno * 100)) < 1e-9;
   return [
-    ["El precio de partida", `<p>La cantidad de partida, ${num(total)}, es el <b>100 %</b>.</p>`],
-    [sube ? "Lo que sube" : "Lo que se descuenta", `<p>El ${pc(p)} de ${num(total)} es <b>${num(cambio.resultado)}</b> (${cambio.base === p ? `el ${pc(p)} es ${QUE_ES[p] ?? "una parte"}` : `${num(cambio.veces)} veces el ${pc(cambio.base)}, que es ${num(cambio.vBase)}`}).</p>`],
-    ["El resultado", `<p>${num(total)} ${sube ? "+" : "−"} ${num(cambio.resultado)} = <b>${num(resultado)}</b>, que es el ${100} ${sube ? "+" : "−"} ${num(p)} = <b>${pc(pFinal)}</b> de la cantidad de partida.</p>`],
-    ["El multiplicador", `<p>${sube ? "Subir" : "Bajar"} un ${pc(p)} es quedarse con el ${pc(pFinal)}: multiplicar por <b>${num(multiplicador)}</b>.</p>
-      <p>${num(total)} · ${num(multiplicador)} = ${num(resultado)}. ${sube ? "El multiplicador es mayor que 1: la cantidad crece." : "El multiplicador es menor que 1: la cantidad baja."}</p>`],
+    ["Lo que sabemos", `<p>La barra de abajo es el precio final, <b>${eur(F)}</b>: ${sube ? `el precio inicial más la subida del ${pc(p)}` : `lo que queda del precio inicial al quitarle el ${pc(p)}`}. Es el 100 % ${s} ${pc(p)} = <b>${pc(pf)}</b>.</p><p>La barra de arriba, el precio inicial, es el 100 %: es lo que buscamos.</p>`],
+    ["El 1 %", `<p>Si ${eur(F)} son el ${pc(pf)}, el 1 % es ${din(F)} : ${num(pf)} = <b>${din(uno)}${unoExacto ? "" : "…"} €</b>.</p>`],
+    ["El 100 %", `<p>El precio inicial es el 100 %: 100 · ${din(uno)}${unoExacto ? "" : "…"} = <b>${eur(I)}</b>.</p><p>Comprobación: ${quitar} es el ${pc(p)} de ${din(I)}, ${eur(c)}, y ${din(I)} ${s} ${din(c)} = ${din(F)}.</p>`],
+    ["En un solo paso: dividir", `<p>Del precio inicial al final se <b>multiplica</b> por ${mult(m)} (flecha azul): precio inicial · ${mult(m)} = ${din(F)}.</p><p>Para volver del final al inicial se deshace: se <b>divide</b> entre ${mult(m)} (flecha roja). ${din(F)} : ${mult(m)} = <b>${eur(I)}</b>.</p>${tabla}`],
+    ["El error típico", `<p>${sube ? "Restar" : "Sumar"} el ${pc(p)} a ${din(F)} da ${eur(malo)}, y no ${eur(I)}: el ${pc(p)} es del precio inicial (la barra de arriba), no del final. ${sube ? "La subida" : "El descuento"} es ${eur(c)}, no ${eur(F * p / 100)}.</p>`],
   ];
 }
+
+const dibujarVariacion = r => dibujarCambio({ I: r.total, F: r.resultado, p: r.p, sube: r.sentido === "sube", pf: r.pFinal, m: r.multiplicador, conocido: "inicial" });
+const dibujarOriginal = r => dibujarCambio({ I: r.inicio, F: r.final, p: r.p, sube: r.sentido === "sube", pf: r.pFinal, m: r.m, conocido: "final", malo: r.malo });
 
 // --------------------------------------------------- dos cambios seguidos
 const signo = (s, p) => `${s === "sube" ? "+" : "−"}${pc(p)}`;
 function dibujarEncadenados(r) {
   const { total, p1, s1, p2, s2, m1, m2, medio, final: fin, m, cambio, sumado, siSumara } = r;
   const g = Pasos.lienzo(300), y = 110, xs = [130, 400, 670];
-  const defs = svg("defs", {}, g);
-  for (const [id, color] of [["punta", "var(--acento)"], ["punta-roja", "var(--rojo)"]]) {
-    const mk = svg("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
-    svg("path", { d: "M 0 0 L 10 5 L 0 10 z", style: `fill: ${color}` }, mk);
-  }
+  puntas(g);
   const caja = (x, v, clase) => { const c = svg("g", { class: clase }, g); svg("rect", { x: x - 85, y: y - 32, width: 170, height: 64, rx: 8, class: "caja-valor" }, c); texto(c, { x, y, t: num(v), clase: "valor-caja" }); };
   caja(xs[0], total, "");
   caja(xs[1], medio, "ver1");
@@ -199,26 +307,6 @@ function dibujarEncadenados(r) {
     ["El segundo, sobre lo nuevo", `<p>El ${pc(p2)} se calcula sobre <b>${num(medio)}</b>, no sobre ${num(total)}: ${num(medio)} · ${num(m2)} = <b>${num(fin)}</b>.</p>`],
     ["Un solo multiplicador", `<p>Los dos cambios equivalen a multiplicar por ${num(m1)} · ${num(m2)} = <b>${num(m)}</b>: en total, ${efecto}.</p>`],
     ["El error típico", `<p>Sumar los porcentajes (${signo(s1, p1)} ${s2 === "sube" ? "+" : "−"} ${pc(p2)} = ${sumado > 0 ? "+" : sumado < 0 ? "−" : ""}${pc(Math.abs(sumado))}) daría ${num(siSumara)}, ${siSumara === fin ? "que aquí coincide por casualidad" : `y no ${num(fin)}`}. Los porcentajes seguidos <b>no se suman</b>: se multiplican sus multiplicadores.</p>`],
-  ];
-}
-
-// --------------------------------------------------- ¿cuánto era antes?
-function dibujarOriginal(r) {
-  const { final: fin, p, sentido, pFinal, m, inicio, uno, malo } = r;
-  const g = Pasos.lienzo(240);
-  const R = rectaDoble(g, { y: 70, max: Math.max(100, pFinal) * 1.08 });
-  R.marca(0, "0");
-  R.marca(pFinal, num(fin));
-  const ref = R.x(1) - R.x(0) >= 40 ? 1 : 10;
-  R.marca(ref, num(uno * ref), "ver1");
-  R.marca(100, "?", "hasta2", true);
-  R.marca(100, num(inicio), "ver2", true, { repite: true });
-  return [
-    ["Lo que sabemos", `<p>Después de ${sentido === "sube" ? "subir" : "bajar"} un ${pc(p)}, vale ${num(fin)}. Esa cantidad es el ${100} ${sentido === "sube" ? "+" : "−"} ${num(p)} = <b>${pc(pFinal)}</b> de lo que valía antes. Lo de antes es el <b>100 %</b>, y no lo conocemos.</p>`],
-    [ref === 1 ? "El 1 %" : "El 10 %", `<p>Si ${num(fin)} es el ${pc(pFinal)}, el 1 % es ${num(fin)} : ${num(pFinal)} = <b>${num(uno)}</b>${ref === 10 ? ` (y el 10 %, ${num(uno * 10)})` : ""}.</p>`],
-    ["El 100 %", `<p>Lo de antes es el 100 %: 100 · ${num(uno)} = <b>${num(inicio)}</b>.</p>`],
-    ["Con el multiplicador", `<p>Si antes · ${num(m)} = ${num(fin)}, entonces antes = ${num(fin)} : ${num(m)} = <b>${num(inicio)}</b>.</p>
-      <p>Error típico: ${sentido === "sube" ? "restar" : "sumar"} el ${pc(p)} a ${num(fin)}, que da ${num(malo)}: el porcentaje era de lo de antes, no de ${num(fin)}.</p>`],
   ];
 }
 
