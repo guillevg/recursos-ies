@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecuaciones con la balanza</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="https://fonts.bunny.net/css?family=figtree:400,600,800&display=swap">
+<link rel="stylesheet" href="pasos.css">
+<style>
+  /* Lo que solo se ve con la ecuación (con-ec) o sin ella (sin-ec) */
+  .con-ec { display: none; }
+  body.ecuacion .con-ec { display: revert; }
+  body.ecuacion .sin-ec { display: none; }
+  .controles { flex-wrap: wrap; }
+  #ver-ecuacion[aria-pressed="true"] { background: var(--acento); color: #fff; border-color: var(--acento); }
+
+  .balanza .hierro { fill: var(--tinta); }
+  .balanza .pie { fill: var(--suave); }
+  .forma { stroke: var(--tinta); stroke-width: 2; transition: fill var(--t), stroke var(--t); }
+  .caja .forma { fill: var(--azul); }
+  .pesa .forma { fill: #e3e8ec; }
+  .caja text { font-size: 22px; font-weight: 700; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .pesa text { font-size: 11px; text-anchor: middle; dominant-baseline: central; fill: var(--tinta); }
+  .caja, .pesa, .extra { transition: opacity var(--t); }
+  /* Marcado en rojo en su paso: lo que se va a quitar de los dos lados */
+  .s1 .m1 .forma, .s2 .m2 .forma, .s3 .m3 .forma, .s4 .m4 .forma { stroke: var(--rojo); stroke-width: 4; }
+  /* Montones del reparto: cada caja y sus pesas, del mismo color */
+  .g0 { --g: #7fb3d5; } .g1 { --g: #f5b041; } .g2 { --g: #8fd19e; } .g3 { --g: #d7a9e3; } .g4 { --g: #f1948a; } .g5 { --g: #f7dc6f; }
+  .s1 .tinte1 .forma, .s2 .tinte2 .forma, .s3 .tinte3 .forma, .s4 .tinte4 .forma, .s5 .tinte5 .forma { fill: var(--g); }
+
+  .s2 .extra.m2 { opacity: 0.4; }
+  .trozo { fill: var(--azul); stroke: var(--tinta); stroke-width: 2; }
+  .extra .forma { fill: var(--naranja); }
+  .nombre { font-size: 18px; fill: var(--tinta); font-weight: 700; }
+  .cuanto { font-size: 18px; fill: var(--acento); font-weight: 700; }
+  .total { font-size: 18px; fill: var(--tinta); }
+  .total.fuerte { font-weight: 700; }
+  .ec { font-size: 24px; fill: var(--tinta); font-variant-numeric: tabular-nums; }
+  .ec-nota { font-size: 15px; fill: var(--suave); }
+</style>
+<link rel="stylesheet" href="../herramientas.css">
+<script>if (window.top !== window.self) document.documentElement.classList.add("en-modal", ...(location.hash.includes("=") ? ["con-datos"] : []));</script>
+</head>
+<body>
+<header>
+  <h1>Ecuaciones con la balanza</h1>
+  <a href="../">← Volver al repaso</a>
+</header>
+
+<nav class="modos" role="tablist" aria-label="Tipo de problema">
+  <button type="button" role="tab" data-modo="balanza">La balanza</button>
+  <button type="button" role="tab" data-modo="barras">Diagrama de barras con incógnita</button>
+</nav>
+
+<form class="entrada" id="entrada" autocomplete="off">
+  <span data-para="balanza">
+    <input id="ba" class="corto" type="number" min="0" max="6" aria-label="Cajas a la izquierda"> cajas y
+    <input id="bb" class="corto" type="number" min="0" max="20" aria-label="Pesas a la izquierda"> pesas
+    <b>=</b>
+    <input id="bc" class="corto" type="number" min="0" max="6" aria-label="Cajas a la derecha"> cajas y
+    <input id="bd" class="corto" type="number" min="0" max="20" aria-label="Pesas a la derecha"> pesas
+  </span>
+  <span data-para="barras">
+    <input id="rn2" type="text" size="9" aria-label="Nombre de la segunda cantidad"> es
+    <input id="rm" class="corto" type="number" min="1" max="6" aria-label="Cuántas veces"> veces
+    <input id="rn1" type="text" size="9" aria-label="Nombre de la primera cantidad"> y
+    <input id="rk" class="corto" type="number" min="0" max="9999" step="any" aria-label="Cuánto más"> más; en total,
+    <input id="rt" type="number" min="1" max="99999" step="any" aria-label="Total">
+  </span>
+  <button type="submit" class="principal">Empezar</button>
+  <div class="ejemplos" id="ejemplos"></div>
+</form>
+
+<p class="enunciado" id="enunciado"></p>
+<div id="escena" class="escena" aria-hidden="true"></div>
+
+<section class="explicacion" aria-live="polite">
+  <h2 id="titulo-paso"></h2>
+  <div id="texto-paso"></div>
+</section>
+
+<div class="controles">
+  <button type="button" id="anterior">← Anterior</button>
+  <div class="puntos" id="puntos"></div>
+  <button type="button" id="siguiente" class="principal">Siguiente →</button>
+  <button type="button" id="ver-ecuacion" aria-pressed="false" title="Mostrar u ocultar la ecuación de cada paso (tecla E)">Mostrar la ecuación</button>
+</div>
+<p class="ayuda">También con las flechas ← → del teclado; la tecla E muestra u oculta la ecuación. Hasta 6 cajas y 20 pesas por platillo.</p>
+
+<script src="pasos.js"></script>
+<script src="ecuaciones.js"></script>
+<script>
+"use strict";
+const { svg, num, texto } = Pasos;
+const { miembro } = Ecuaciones;
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+const limpio = t => String(t).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+// --------------------------------------------------- mostrar la ecuación
+// La ecuación se escribe debajo del dibujo; al ocultarla, el lienzo se
+// acorta para que el dibujo ocupe todo el sitio.
+let verEcuacion = false, lienzoActual = null;
+function aplicarEcuacion() {
+  if (document.body) document.body.classList.toggle("ecuacion", verEcuacion);
+  if (lienzoActual) lienzoActual.el.setAttribute("viewBox", `0 0 800 ${verEcuacion ? lienzoActual.conEcuacion : lienzoActual.alto}`);
+  const boton = document.getElementById("ver-ecuacion");
+  boton.setAttribute("aria-pressed", verEcuacion);
+  boton.textContent = verEcuacion ? "Ocultar la ecuación" : "Mostrar la ecuación";
+}
+function alternarEcuacion() { verEcuacion = !verEcuacion; aplicarEcuacion(); }
+document.getElementById("ver-ecuacion").addEventListener("click", alternarEcuacion);
+document.addEventListener("keydown", ev => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) return;
+  if (ev.key === "e" || ev.key === "E") alternarEcuacion();
+});
+
+// Lienzo de `alto` y, debajo, las líneas de la ecuación: [izquierda,
+// derecha, nota, paso en que aparece]. El «=» queda en el centro (x = 400).
+function lienzoConEcuacion(alto, lineas) {
+  const g = Pasos.lienzo(alto);
+  lienzoActual = { el: g, alto, conEcuacion: alto + 24 + lineas.length * 38 };
+  const grupo = svg("g", { class: "con-ec" }, g);
+  lineas.forEach(([izq, der, nota, paso], i) => {
+    const l = svg("g", { class: paso ? "ver" + paso : "" }, grupo), y = alto + 40 + i * 38;
+    texto(l, { x: 378, y, t: izq, clase: "ec", ancla: "end" });
+    texto(l, { x: 400, y, t: "=", clase: "ec" });
+    texto(l, { x: 422, y, t: der, clase: "ec", ancla: "start" });
+    if (nota) texto(l, { x: 780, y, t: nota, clase: "ec-nota", ancla: "end" });
+  });
+  aplicarEcuacion();
+  return g;
+}
+
+// ---------------------------------------------------------------- balanza
+const YP = 130;   // altura de los platillos
+function dibujarBalanza(r) {
+  const { a, b, c, d, x, cajas, pesas, lado, k, m, entera, peso } = r;
+  // Pasos: (marcar y quitar cajas) (marcar y quitar pesas) (repartir, una caja) comprobación.
+  let s = 0;
+  const sMC = cajas ? s + 1 : 0, sQC = cajas ? (s += 2) : 0;
+  const sMP = pesas ? s + 1 : 0, sQP = pesas ? (s += 2) : 0;
+  const montones = k > 1 && entera;
+  const sR = montones ? s + 1 : 0, sU = k > 1 ? (s += montones ? 2 : 1) : 0;
+  const sC = s + 1;
+
+  const cx = v => v === 1 ? "x" : `${v}x`;
+  const lineas = [[miembro(a, b), miembro(c, d), "", 0]];
+  if (cajas) lineas.push([miembro(a - cajas, b), miembro(c - cajas, d), `− ${cx(cajas)} en los dos miembros`, sQC]);
+  if (pesas) lineas.push([miembro(a - cajas, b - pesas), miembro(c - cajas, d - pesas), `− ${pesas} en los dos miembros`, sQP]);
+  if (k > 1) lineas.push([...(lado === "izq" ? ["x", num(x)] : [num(x), "x"]), `: ${k} en los dos miembros`, sU]);
+  if (lado === "der") lineas.push(["x", num(x), "lo mismo, leído al revés", sC]);
+
+  const g = lienzoConEcuacion(240, lineas);
+  const bal = svg("g", { class: "balanza" }, g);
+  svg("rect", { x: 320, y: 222, width: 160, height: 6, rx: 3, class: "hierro" }, bal);
+  svg("polygon", { points: "400,166 372,223 428,223", class: "pie" }, bal);
+  svg("rect", { x: 201, y: 160, width: 398, height: 8, rx: 3, class: "hierro" }, bal);
+
+  // Un platillo centrado en xc: las cajas a la izquierda (filas de 3) y las
+  // pesas a la derecha. Donde quedan las pesas del reparto, van ya en
+  // montones (uno por caja) y, aparte, las que se quitan.
+  function platillo(xc, nCajas, nPesas, conCajas) {
+    const x0 = xc - 170;
+    svg("rect", { x: xc - 4, y: YP + 6, width: 8, height: 160 - YP - 4, class: "hierro" }, bal);
+    svg("rect", { x: x0, y: YP, width: 340, height: 8, rx: 3, class: "hierro" }, bal);
+    for (let i = 0; i < nCajas; i++) {
+      // Se quitan las últimas; de las que quedan, cada una es un montón.
+      const clase = i >= nCajas - cajas ? `m${sMC} hasta${sQC}`
+        : montones ? `tinte${sR} g${i} ${i > 0 ? "hasta" + sU : ""}` : "";
+      const caja = svg("g", { class: "caja " + clase }, g);
+      const bx = x0 + 8 + (i % 3) * 48, by = YP - 45 - Math.floor(i / 3) * 46;
+      svg("rect", { x: bx, y: by, width: 44, height: 44, rx: 4, class: "forma" }, caja);
+      texto(caja, { x: bx + 22, y: by + 23, t: "?", clase: "sin-ec" });
+      texto(caja, { x: bx + 22, y: by + 22, t: "x", clase: "con-ec" });
+    }
+    const xp = x0 + 8 + Math.min(nCajas, 3) * 48 + (nCajas ? 8 : 0), quedan = nPesas - pesas;
+    const pesa = (px, fila, clase) => {
+      const p = svg("g", { class: "pesa " + clase }, g), py = YP - 11 - fila * 22;
+      svg("circle", { cx: px + 11, cy: py, r: 10, class: "forma" }, p);
+      texto(p, { x: px + 11, y: py + 1, t: "1" });
+    };
+    const enMontones = montones && !conCajas;
+    const columnas = x <= 4 ? 1 : 2;                       // de cada montón
+    for (let i = 0; i < quedan; i++) {
+      if (!enMontones) { pesa(xp + (i % 5) * 22, Math.floor(i / 5), ""); continue; }
+      const mo = Math.floor(i / x), j = i % x;
+      pesa(xp + mo * (columnas * 22 + 8) + (j % columnas) * 22, Math.floor(j / columnas), `tinte${sR} g${mo} ${mo > 0 ? "hasta" + sU : ""}`);
+    }
+    // Las que se quitan: detrás de los montones o encima de las demás.
+    for (let i = 0; i < pesas; i++) {
+      const n = enMontones ? i : quedan + i, xq = enMontones ? xp + k * (columnas * 22 + 8) + 2 : xp;
+      if (enMontones) pesa(xq + Math.floor(n / 5) * 22, n % 5, `m${sMP} hasta${sQP}`);
+      else pesa(xq + (n % 5) * 22, Math.floor(n / 5), `m${sMP} hasta${sQP}`);
+    }
+  }
+  platillo(205, a, b, lado === "izq");
+  platillo(595, c, d, lado === "der");
+
+  const hay = (nc, np) => [nc ? plural(nc, "caja", "cajas") : "", np ? plural(np, "pesa", "pesas") : ""].filter(Boolean).join(" y ") || "nada";
+  const pesan = (nc, np) => [nc ? `${nc} · ${num(x)}` : "", np ? String(np) : ""].filter(Boolean).join(" + ");
+  const a1 = a - cajas, c1 = c - cajas, b2 = b - pesas, d2 = d - pesas;
+  const pasos = [["La balanza", `<p>La balanza está <b>equilibrada</b>: los dos platillos pesan lo mismo. A la izquierda, ${hay(a, b)}; a la derecha, ${hay(c, d)}.</p>
+    <p>Todas las cajas pesan lo mismo, pero no sabemos cuánto. Cada pesa es de 1 kg.</p>
+    <p class="con-ec">Llamamos <b>x</b> a lo que pesa una caja. La balanza es la ecuación, y el fiel, el signo =.</p>`]];
+  if (cajas) pasos.push(
+    ["¿Qué se puede quitar?", `<p>Hay cajas en los dos platillos. Si quitamos <b>${plural(cajas, "caja", "cajas")} de cada uno</b> (en rojo), quitamos el mismo peso de los dos lados.</p>`],
+    ["Quitamos cajas", `<p>La balanza sigue equilibrada. Quedan ${hay(a1, b)} a la izquierda y ${hay(c1, d)} a la derecha.</p>
+      <p class="con-ec">En la ecuación, restamos ${cx(cajas)} en los dos miembros.</p>`]);
+  if (pesas) pasos.push(
+    ["¿Y ahora?", `<p>Hay pesas en los dos platillos. Quitamos <b>${plural(pesas, "pesa", "pesas")} de cada uno</b> (en rojo).</p>`],
+    ["Quitamos pesas", `<p>Sigue equilibrada, y las cajas se han quedado solas en un platillo: ${hay(a1, b2)} a la izquierda y ${hay(c1, d2)} a la derecha.</p>
+      <p class="con-ec">En la ecuación, restamos ${pesas} en los dos miembros.</p>`]);
+  if (montones) pasos.push(
+    ["Repartimos", `<p>${k} cajas iguales pesan ${m} kg. Repartimos las pesas en ${k} montones iguales, uno para cada caja: ${m} : ${k} = ${num(x)} pesas por caja.</p>`],
+    ["Una caja", `<p>Nos quedamos con una caja y su montón: los dos platillos se han dividido entre ${k} y la balanza sigue equilibrada.</p>
+      <p class="con-ec">En la ecuación, dividimos entre ${k} los dos miembros.</p>`]);
+  else if (k > 1) pasos.push(
+    ["Repartimos", `<p>${k} cajas iguales pesan ${m} kg: a cada una le tocan ${m} : ${k} = <b>${num(x)}</b> kg (no sale un número entero de pesas).</p>
+      <p class="con-ec">En la ecuación, dividimos entre ${k} los dos miembros.</p>`]);
+  pasos.push(["Resultado y comprobación", `<p>Cada caja pesa <b>${num(x)} kg</b>. Lo comprobamos en la balanza del principio:</p>
+    <p>Izquierda: ${pesan(a, b)} = ${num(peso)} kg. Derecha: ${pesan(c, d)} = ${num(peso)} kg ✓</p>`]);
+  return pasos;
+}
+
+// ------------------------------------------------------- barras con incógnita
+function dibujarBarras(r, datos) {
+  const { m, k, total, x, trozos, iguales, segunda } = r;
+  const n1 = datos.n1 || "Primera", n2 = datos.n2 || "Segunda";
+  const sT = 1, sK = k > 0 ? 2 : 0, sV = k > 0 ? 3 : 2, sF = sV + 1;
+  const mx = m === 1 ? "x" : `${m}x`, masK = k > 0 ? ` + ${num(k)}` : "";
+  const lineas = [[`x + ${mx}${masK}`, num(total), "", 0],
+                  [`${trozos}x${masK}`, num(total), "sumamos las x", sT]];
+  if (k > 0) lineas.push([`${trozos}x`, num(iguales), `− ${num(k)} en los dos miembros`, sK]);
+  lineas.push(["x", num(x), `: ${trozos} en los dos miembros`, sV]);
+
+  const g = lienzoConEcuacion(205, lineas);
+  // Anchura de un trozo y del trozo de más (casi a escala, sin que quede diminuto).
+  const rk = k > 0 ? Math.max(0.4, Math.min(2, k / x)) : 0;
+  const W = Math.min(170, 520 / (m + rk)), wk = rk * W, X = 150, H = 50, y1 = 40, y2 = 125;
+  let cuenta = 0;
+  function trozo(xi, y) {
+    svg("rect", { x: xi, y, width: W, height: H, class: "trozo" }, g);
+    texto(g, { x: xi + W / 2, y: y - 7, t: String(++cuenta), clase: `rotulo-barra ver${sT}` });
+    const inc = svg("g", { class: "hasta" + sV }, g);
+    texto(inc, { x: xi + W / 2, y: y + H / 2, t: "?", clase: "valor sin-ec" });
+    texto(inc, { x: xi + W / 2, y: y + H / 2, t: "x", clase: "valor con-ec" });
+    texto(g, { x: xi + W / 2, y: y + H / 2, t: num(x), clase: `valor ver${sV}` });
+  }
+  trozo(X, y1);
+  for (let i = 0; i < m; i++) trozo(X + i * W, y2);
+  if (k > 0) {
+    const extra = svg("g", { class: `extra m${sK}` }, g);
+    svg("rect", { x: X + m * W, y: y2, width: wk, height: H, class: "forma" }, extra);
+    texto(extra, { x: X + m * W + wk / 2, y: y2 + H / 2, t: num(k), clase: "valor" + (wk < 46 ? " pequeno" : "") });
+  }
+  // Nombres (y, al final, lo que vale cada barra) a la izquierda.
+  for (const [nombre, y, valor] of [[n1, y1, x], [n2, y2, segunda]]) {
+    texto(g, { x: X - 12, y: y + H / 2 - 2, t: nombre, clase: "nombre", ancla: "end" });
+    texto(g, { x: X - 12, y: y + H / 2 + 20, t: num(valor), clase: `cuanto ver${sF}`, ancla: "end" });
+  }
+  // Llave del total, a la derecha de las dos barras.
+  const xb = 690, ym = (y1 + y2 + H) / 2;
+  svg("path", { d: `M ${xb - 8} ${y1} H ${xb} V ${y2 + H} H ${xb - 8} M ${xb} ${ym} H ${xb + 7}`, class: "llave" }, g);
+  texto(g, { x: xb + 12, y: ym - 4, t: num(total), clase: "total fuerte", ancla: "start" });
+  texto(g, { x: xb + 12, y: ym + 16, t: "en total", clase: "total", ancla: "start" });
+
+  const N1 = limpio(n1), N2 = limpio(n2);
+  const pasos = [
+    ["El dibujo", `<p>La barra de <b>${N1}</b> es un trozo: lo que no sabemos. La de <b>${N2}</b> ${m === 1 ? "es un trozo igual" : `son ${m} trozos como ese`}${k > 0 ? `, y ${num(k)} más (en naranja)` : ""}. Entre las dos barras, <b>${num(total)}</b>.</p>
+      <p class="con-ec">Llamamos <b>x</b> a un trozo, y la ecuación es el dibujo con letras.</p>`],
+    ["Trozos iguales", `<p>Entre las dos barras hay 1 + ${m} = <b>${trozos} trozos iguales</b>${k > 0 ? `, además del trozo naranja de ${num(k)}` : ""}.</p>
+      <p class="con-ec">En la ecuación, sumamos las x: x + ${mx} = ${trozos}x.</p>`],
+  ];
+  if (k > 0) pasos.push(["Quitamos lo que sobra", `<p>Si al total le quitamos el trozo naranja, queda lo que suman los ${trozos} trozos iguales: ${num(total)} − ${num(k)} = <b>${num(iguales)}</b>.</p>
+      <p class="con-ec">En la ecuación, restamos ${num(k)} en los dos miembros.</p>`]);
+  pasos.push(
+    ["Un trozo", `<p>${trozos} trozos iguales suman ${num(iguales)}: cada uno vale ${num(iguales)} : ${trozos} = <b>${num(x)}</b>.</p>
+      <p class="con-ec">En la ecuación, dividimos entre ${trozos} los dos miembros. La x es un trozo de la barra.</p>`],
+    ["Respuesta y comprobación", `<p>${N1}: <b>${num(x)}</b>. ${N2}: ${m === 1 ? num(x) : `${m} · ${num(x)}`}${masK} = <b>${num(segunda)}</b>.</p>
+      <p>Comprobación: ${num(x)} + ${num(segunda)} = ${num(total)} ✓</p>`]);
+  return pasos;
+}
+
+let ultimosNombres = {};
+const elegirModo = Pasos.montar({
+  balanza: { campos: { a: "ba", b: "bb", c: "bc", d: "bd" }, calcular: Ecuaciones.calcular.balanza, dibujar: dibujarBalanza,
+             ejemplos: Ecuaciones.EJEMPLOS.balanza, azar: () => Ecuaciones.azar("balanza") },
+  barras: { campos: { m: "rm", k: "rk", total: "rt", n1: "rn1", n2: "rn2" },
+            calcular: datos => { ultimosNombres = datos; return Ecuaciones.calcular.barras(datos); },
+            dibujar: r => dibujarBarras(r, ultimosNombres),
+            ejemplos: Ecuaciones.EJEMPLOS.barras, azar: () => Ecuaciones.azar("barras") },
+}, "balanza");
+</script>
+</body>
+</html>
